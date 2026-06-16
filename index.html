@@ -2,170 +2,121 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全台即時影像與天氣監控</title>
+    <title>即時影像</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
-        :root {
-            --primary-color: #0078D7;
-            --hover-color: #005fa3;
-            --bg-color: #f0f2f5;
-            --card-bg: #ffffff;
-            --text-main: #333333;
-        }
-
         body {
-            font-family: 'Segoe UI', "Microsoft JhengHei", Arial, sans-serif;
+            font-family: Arial, sans-serif;
             text-align: center;
-            background-color: var(--bg-color);
+            background-color: #f5f5f5;
             margin: 0;
             padding: 20px;
-            color: var(--text-main);
-        }
-
-        .page-title {
-            margin-bottom: 30px;
-            font-size: 28px;
-            font-weight: bold;
         }
 
         .container {
             display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 30px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        /* 將原本的 cam-box 改名為 card-box，讓它同時適用於影像跟天氣 */
-        .card-box {
-            background: var(--card-bg);
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            width: 100%;
-            max-width: 480px; 
-            box-sizing: border-box;
-            display: flex;
             flex-direction: column;
-        }
-
-        .card-box:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 8px 20px rgba(0,0,0,0.12);
-        }
-
-        .card-title {
-            margin: 0 0 12px 0;
-            font-size: 18px;
-            font-weight: bold;
-            text-align: left;
-            display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 20px;
         }
 
-        /* 使用現代的 aspect-ratio 來控制比例，取代原本的 padding 寫法，語法更乾淨 */
-        .iframe-wrapper {
-            position: relative;
-            width: 100%;
-            aspect-ratio: 3 / 2; /* 保持 3:2 比例 */
-            border-radius: 8px;
-            overflow: hidden;
-            background-color: #e0e0e0;
+        .cam-box {
+            background: white;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.2);
         }
 
-        /* 針對天氣 Widget 可能需要不同高度，設定另一個比例或固定高度 */
-        .weather-wrapper {
-            position: relative;
-            width: 100%;
-            height: 250px; /* 天氣小工具通常不需要太高，給予固定高度 */
-            border-radius: 8px;
-            overflow: hidden;
-            background-color: #f9f9f9;
-        }
-
-        iframe {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        /* 讓 iframe 和 video 套用相同的樣式 */
+        iframe, video {
+            width: 480px;
+            height: 320px;
             border: none;
-            display: block;
+            border-radius: 10px;
+            display: block; /* 讓影像作為區塊顯示，避免多餘空白 */
+            background-color: #000; /* 影片載入前的黑色背景 */
         }
 
         button {
-            margin-top: 15px;
-            padding: 12px 16px;
+            margin-top: 10px;
+            padding: 8px 16px;
             font-size: 16px;
-            font-weight: 600;
             border: none;
-            border-radius: 8px;
-            background-color: var(--primary-color);
+            border-radius: 6px;
+            background-color: #0078D7;
             color: white;
             cursor: pointer;
-            width: 100%;
-            transition: background-color 0.2s, transform 0.1s;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-            /* 讓按鈕固定在卡片底部 */
-            margin-top: auto; 
+            width: 100%; /* 讓按鈕寬度自動對齊影像寬度，視覺更整齊 */
         }
 
         button:hover {
-            background-color: var(--hover-color);
-        }
-
-        button:active {
-            transform: scale(0.98);
+            background-color: #005fa3;
         }
     </style>
 </head>
 <body>
 
-    <h1 class="page-title">即時路況與天氣儀表板</h1>
-
-    <main class="container">
+    <div class="container">
         
-        <section class="card-box">
-            <h2 class="card-title">📷 新北即時影像</h2>
-            <div class="iframe-wrapper">
-                <iframe id="cam1" src="https://www.twipcam.com/cam/nwt-000020" title="新北即時影像" loading="lazy" allowfullscreen></iframe>
-            </div>
-            <button onclick="reloadIframe('cam1')">↻ 重新載入影像</button>
-        </section>
+        <div class="cam-box">
+            <video id="cam1" controls muted autoplay></video>
+            <button onclick="playCam1()">撥放 (重整串流)</button>
+        </div>
 
-        <section class="card-box">
-            <h2 class="card-title">📷 桃園即時影像</h2>
-            <div class="iframe-wrapper">
-                <iframe id="cam2" src="https://www.twipcam.com/cam/tao-000150" title="桃園即時影像" loading="lazy" allowfullscreen></iframe>
-            </div>
-            <button onclick="reloadIframe('cam2')">↻ 重新載入影像</button>
-        </section>
+        <div class="cam-box">
+            <iframe id="cam2" src="https://www.twipcam.com/cam/tao-000150"></iframe>
+            <button onclick="reloadCam('cam2')">撥放</button>
+        </div>
 
-        <section class="card-box">
-            <h2 class="card-title">🌤️ 台中即時天氣</h2>
-            <div class="weather-wrapper">
-                <iframe id="weather1" src="https://www.twipcam.com/widget/v1/wx-info?lat=24.1618&lon=120.6468" title="台中即時天氣" loading="lazy"></iframe>
-            </div>
-            <button onclick="reloadIframe('weather1')">↻ 更新天氣資訊</button>
-        </section>
-
-    </main>
+    </div>
 
     <script>
-        // 將原本的 reloadCam 改名為更通用的 reloadIframe，因為現在也適用於天氣
-        function reloadIframe(iframeId) {
-            const iframe = document.getElementById(iframeId);
-            if (iframe) {
-                const url = new URL(iframe.src);
-                url.searchParams.set('t', new Date().getTime());
-                iframe.src = url.toString();
+        // 設定 HLS 影片連結
+        const videoSrc = "https://cctvatis1.ntpc.gov.tw/hls/C000020/live.m3u8";
+        let hls;
+
+        function setupHLS() {
+            var video = document.getElementById('cam1');
+            
+            // 檢查瀏覽器是否支援 hls.js
+            if (Hls.isSupported()) {
+                if (hls) {
+                    hls.destroy(); // 如果已經有實例，先銷毀以防重複載入
+                }
+                hls = new Hls();
+                hls.loadSource(videoSrc);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                    video.play();
+                });
+            } 
+            // 針對原生支援 HLS 的瀏覽器 (如 Safari)
+            else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = videoSrc;
+                video.addEventListener('loadedmetadata', function() {
+                    video.play();
+                });
             }
+        }
+
+        // 網頁載入完成後初始化 HLS 影片
+        window.addEventListener('DOMContentLoaded', setupHLS);
+
+        // 第一個攝影機的播放/重整按鈕邏輯
+        function playCam1() {
+            var video = document.getElementById('cam1');
+            if (video.paused) {
+                video.play();
+            } else {
+                // 如果已經在播放，點擊按鈕則重新連接串流
+                setupHLS();
+            }
+        }
+
+        // 第二個攝影機的重整邏輯 (維持不變)
+        function reloadCam(camId) {
+            var iframe = document.getElementById(camId);
+            iframe.src = iframe.src;
         }
     </script>
 
