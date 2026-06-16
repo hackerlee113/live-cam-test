@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>全台即時影像監控</title>
+    <title>全台即時影像與天氣監控</title>
     <style>
-        /* 定義全域變數，方便日後修改主題顏色 */
         :root {
             --primary-color: #0078D7;
             --hover-color: #005fa3;
@@ -25,10 +24,10 @@
 
         .page-title {
             margin-bottom: 30px;
-            font-size: 24px;
+            font-size: 28px;
+            font-weight: bold;
         }
 
-        /* 改用 Grid 或 Flex-wrap 來達成響應式排列 */
         .container {
             display: flex;
             flex-wrap: wrap;
@@ -38,24 +37,26 @@
             margin: 0 auto;
         }
 
-        .cam-box {
+        /* 將原本的 cam-box 改名為 card-box，讓它同時適用於影像跟天氣 */
+        .card-box {
             background: var(--card-bg);
             padding: 20px;
             border-radius: 12px;
             box-shadow: 0 4px 10px rgba(0,0,0,0.08);
             transition: transform 0.2s ease, box-shadow 0.2s ease;
             width: 100%;
-            max-width: 480px; /* 限制最大寬度，在電腦螢幕上不會無限放大 */
+            max-width: 480px; 
             box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
         }
 
-        /* 加入懸浮特效，提升質感 */
-        .cam-box:hover {
+        .card-box:hover {
             transform: translateY(-5px);
             box-shadow: 0 8px 20px rgba(0,0,0,0.12);
         }
 
-        .cam-title {
+        .card-title {
             margin: 0 0 12px 0;
             font-size: 18px;
             font-weight: bold;
@@ -65,14 +66,24 @@
             gap: 8px;
         }
 
-        /* 影片容器：利用 padding-bottom 保持 3:2 比例，讓 iframe 真正響應式 */
-        .video-wrapper {
+        /* 使用現代的 aspect-ratio 來控制比例，取代原本的 padding 寫法，語法更乾淨 */
+        .iframe-wrapper {
             position: relative;
             width: 100%;
-            padding-bottom: 66.66%; 
+            aspect-ratio: 3 / 2; /* 保持 3:2 比例 */
             border-radius: 8px;
             overflow: hidden;
             background-color: #e0e0e0;
+        }
+
+        /* 針對天氣 Widget 可能需要不同高度，設定另一個比例或固定高度 */
+        .weather-wrapper {
+            position: relative;
+            width: 100%;
+            height: 250px; /* 天氣小工具通常不需要太高，給予固定高度 */
+            border-radius: 8px;
+            overflow: hidden;
+            background-color: #f9f9f9;
         }
 
         iframe {
@@ -101,13 +112,14 @@
             justify-content: center;
             align-items: center;
             gap: 8px;
+            /* 讓按鈕固定在卡片底部 */
+            margin-top: auto; 
         }
 
         button:hover {
             background-color: var(--hover-color);
         }
 
-        /* 按下按鈕時的微小縮放回饋 */
         button:active {
             transform: scale(0.98);
         }
@@ -115,33 +127,41 @@
 </head>
 <body>
 
-    <h1 class="page-title">即時路況影像</h1>
+    <h1 class="page-title">即時路況與天氣儀表板</h1>
 
     <main class="container">
         
-        <section class="cam-box">
-            <h2 class="cam-title">📷 新北即時影像</h2>
-            <div class="video-wrapper">
+        <section class="card-box">
+            <h2 class="card-title">📷 新北即時影像</h2>
+            <div class="iframe-wrapper">
                 <iframe id="cam1" src="https://www.twipcam.com/cam/nwt-000020" title="新北即時影像" loading="lazy" allowfullscreen></iframe>
             </div>
-            <button onclick="reloadCam('cam1')">↻ 重新載入</button>
+            <button onclick="reloadIframe('cam1')">↻ 重新載入影像</button>
         </section>
 
-        <section class="cam-box">
-            <h2 class="cam-title">📷 桃園即時影像</h2>
-            <div class="video-wrapper">
+        <section class="card-box">
+            <h2 class="card-title">📷 桃園即時影像</h2>
+            <div class="iframe-wrapper">
                 <iframe id="cam2" src="https://www.twipcam.com/cam/tao-000150" title="桃園即時影像" loading="lazy" allowfullscreen></iframe>
             </div>
-            <button onclick="reloadCam('cam2')">↻ 重新載入</button>
+            <button onclick="reloadIframe('cam2')">↻ 重新載入影像</button>
+        </section>
+
+        <section class="card-box">
+            <h2 class="card-title">🌤️ 台中即時天氣</h2>
+            <div class="weather-wrapper">
+                <iframe id="weather1" src="https://www.twipcam.com/widget/v1/wx-info?lat=24.1618&lon=120.6468" title="台中即時天氣" loading="lazy"></iframe>
+            </div>
+            <button onclick="reloadIframe('weather1')">↻ 更新天氣資訊</button>
         </section>
 
     </main>
 
     <script>
-        function reloadCam(camId) {
-            const iframe = document.getElementById(camId);
+        // 將原本的 reloadCam 改名為更通用的 reloadIframe，因為現在也適用於天氣
+        function reloadIframe(iframeId) {
+            const iframe = document.getElementById(iframeId);
             if (iframe) {
-                // 強制重新載入的保險作法：在 URL 後方加上時間戳記避免瀏覽器快取
                 const url = new URL(iframe.src);
                 url.searchParams.set('t', new Date().getTime());
                 iframe.src = url.toString();
