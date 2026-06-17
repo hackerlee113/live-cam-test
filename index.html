@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>即時交通影像與天氣資訊</title>
-    <!-- 引入 hls.js 用來讓非 Safari 瀏覽器播放 m3u8 格式的串流 -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -17,11 +16,15 @@
         h1 {
             text-align: center;
             color: #2c3e50;
+            font-size: 1.5em;
         }
+        
+        /* 天氣區塊：手機上自動變成上下排列 */
         .weather-container {
             display: flex;
+            flex-wrap: wrap;
             justify-content: center;
-            gap: 20px;
+            gap: 15px;
             margin-bottom: 20px;
         }
         .weather-card {
@@ -30,6 +33,8 @@
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             text-align: center;
+            flex: 1 1 250px; /* 允許縮放，最小寬度 250px */
+            max-width: 400px;
         }
         .weather-card h3 {
             margin: 0 0 10px 0;
@@ -39,6 +44,8 @@
             margin: 5px 0;
             font-size: 1.1em;
         }
+
+        /* 攝影機區塊：手機上自動換行，電腦上並排 */
         .cctv-container {
             display: flex;
             flex-wrap: wrap;
@@ -53,16 +60,22 @@
             width: 100%;
             max-width: 600px;
             text-align: center;
+            box-sizing: border-box; /* 確保 padding 不會撐破容器 */
         }
         .cctv-box h3 {
             margin-top: 0;
+            font-size: 1.2em;
         }
+
+        /* 讓影片與 iframe 自動符合寬度，並維持 16:9 比例 */
         video, iframe {
             width: 100%;
-            height: 337px; /* 16:9 比例 */
+            height: auto;
+            aspect-ratio: 16 / 9; /* 關鍵設定：自動維持 16:9 比例 */
             border: none;
             background-color: #000;
             border-radius: 4px;
+            display: block; /* 移除底部多餘空白 */
         }
     </style>
 </head>
@@ -70,10 +83,9 @@
 
     <h1>即時交通影像與天氣資訊</h1>
 
-    <!-- 靜態即時天氣區塊 -->
     <div class="weather-container">
         <div class="weather-card">
-            <h3>📍 新北/台北即時天氣</h3>
+            <h3>📍 新北即時天氣</h3>
             <p><strong>氣溫：</strong> 27°C (體感 32°C)</p>
             <p><strong>天氣：</strong> 🌧️ 小雨</p>
             <p><strong>濕度：</strong> 87%</p>
@@ -86,19 +98,15 @@
         </div>
     </div>
 
-    <!-- 攝影機畫面區塊 -->
     <div class="cctv-container">
-        <!-- 攝影機 1 (新北市 HLS) -->
         <div class="cctv-box">
             <h3>🎥 新北市 CCTV</h3>
-            <!-- 加入 playsinline 讓 iOS Safari 可以網頁內嵌播放，不強制全螢幕 -->
             <video id="video1" controls autoplay muted playsinline></video>
         </div>
 
-        <!-- 攝影機 2 (桃園市) -->
         <div class="cctv-box">
             <h3>🎥 桃園市 CCTV</h3>
-            <iframe src="https://cctvtraffic.tycg.gov.tw/camera150/?t=1781604845214" title="桃園市 CCTV"></iframe>
+            <iframe src="https://cctvtraffic.tycg.gov.tw/camera150/?t=1781604845214" title="桃園市 CCTV" scrolling="no"></iframe>
         </div>
     </div>
 
