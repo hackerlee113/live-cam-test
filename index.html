@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>即時交通影像與天氣資訊</title>
-    <!-- 引入 hls.js 用來讓非 Safari 瀏覽器播放 m3u8 格式的串流 -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -57,7 +56,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 600px;
+            max-width: 600px; /* 電腦版最大寬度 */
             text-align: center;
             box-sizing: border-box;
         }
@@ -66,29 +65,56 @@
             font-size: 1.2em;
         }
 
-        /* 影片與 iframe 的防溢出容器 (解決 iOS Safari iframe 放大 Bug) */
-        .media-wrapper {
+        /*==================================================
+          關鍵修復：iframe 變形縮放容器
+          這個方法適用於手機版畫面被放大剪裁的問題。
+        ====================================================*/
+        
+        /* 1. 外部容器：用來限定 16:9 比例和黑底 */
+        .cctv-box-media-frame {
             position: relative;
             width: 100%;
-            aspect-ratio: 16 / 9; /* 維持完美的 16:9 比例 */
-            background-color: #000;
+            height: auto;
+            aspect-ratio: 16 / 9; /* 固定比例 */
+            background: #000;
             border-radius: 4px;
-            overflow: hidden; /* 強制裁切任何超出的部分 */
-            -webkit-overflow-scrolling: touch;
+            overflow: hidden; /* 防止內容溢出 */
         }
 
-        /* 裡面的內容填滿容器 */
-        .media-wrapper video,
-        .media-wrapper iframe {
+        /* 2. 內部包裹層：用來處理 3D 變形的原點 */
+        .cctv-iframe-scaler {
             position: absolute;
             top: 0;
             left: 0;
-            /* 針對 Safari 的 iframe 黑科技：強制限制寬度 */
-            width: 1px; 
-            min-width: 100%; 
+            width: 100%;
+            height: 100%;
+            transform-origin: top left; /* 重要：從左上角開始縮放 */
+        }
+
+        /* 3. 影片與 iframe 本體：在電腦上正常設定 */
+        video, .cctv-iframe-scaler iframe {
+            display: block;
+            width: 100%;
             height: 100%;
             border: none;
             object-fit: fill;
+        }
+
+        /*==================================================
+          針對手機窄螢幕的 3D 變形修復 (黑科技 2.0)
+          當螢幕寬度小於 600px (手機直向) 時啟用。
+          如果畫面仍然被放大，請嘗試調整 scaleFactor = 0.5 縮小倍數。
+        ====================================================*/
+        @media only screen and (max-width: 600px) {
+            .cctv-iframe-scaler {
+                /* 手動計算縮小倍數。如果畫面還是太偏大，請把 0.5 改更小 (例如 0.45) */
+                --scaleFactor: 0.5; 
+                transform: scale(var(--scaleFactor));
+                
+                /* 強迫 iframe 使用「原始大的尺寸」而不是手機的窄尺寸 */
+                width: calc(100% / var(--scaleFactor));
+                height: calc(100% / var(--scaleFactor));
+            }
         }
     </style>
 </head>
@@ -96,7 +122,6 @@
 
     <h1>即時交通影像與天氣資訊</h1>
 
-    <!-- 靜態即時天氣區塊 -->
     <div class="weather-container">
         <div class="weather-card">
             <h3>📍 新北即時天氣</h3>
@@ -112,23 +137,20 @@
         </div>
     </div>
 
-    <!-- 攝影機畫面區塊 -->
     <div class="cctv-container">
-        <!-- 攝影機 1 (新北市 HLS) -->
         <div class="cctv-box">
             <h3>🎥 新北市 CCTV</h3>
-            <!-- 用 media-wrapper 包起來 -->
-            <div class="media-wrapper">
+            <div class="cctv-box-media-frame">
                 <video id="video1" controls autoplay muted playsinline></video>
             </div>
         </div>
 
-        <!-- 攝影機 2 (桃園市) -->
         <div class="cctv-box">
             <h3>🎥 桃園市 CCTV</h3>
-            <!-- 用 media-wrapper 包起來 -->
-            <div class="media-wrapper">
-                <iframe src="https://cctvtraffic.tycg.gov.tw/camera150/?t=1781604845214" title="桃園市 CCTV" scrolling="no"></iframe>
+            <div class="cctv-box-media-frame">
+                <div class="cctv-iframe-scaler">
+                    <iframe src="https://cctvtraffic.tycg.gov.tw/camera150/?t=1781604845214" title="桃園市 CCTV" scrolling="no"></iframe>
+                </div>
             </div>
         </div>
     </div>
