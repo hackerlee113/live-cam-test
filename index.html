@@ -25,17 +25,17 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: 20px;
+            gap: 20px; /* 每張卡片之間的垂直間距 */
         }
 
-        /* 通用卡片樣式 */
+        /* 通用卡片樣式：讓天氣和影像的卡片寬度、圓角完全一致 */
         .card {
             background: #fff;
             padding: 15px 20px;
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             width: 100%;
-            max-width: 600px;
+            max-width: 600px; /* 最大寬度，電腦螢幕上才不會無限拉寬 */
             box-sizing: border-box;
             text-align: center;
         }
@@ -48,15 +48,6 @@
         /* 天氣特有樣式 */
         .weather-card h3 {
             color: #007BFF;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-        }
-        .station-info {
-            font-size: 0.7em;
-            color: #666;
-            font-weight: normal;
         }
         .weather-card p {
             margin: 5px 0;
@@ -68,10 +59,10 @@
             position: relative;
             width: 100%;
             height: auto;
-            aspect-ratio: 16 / 9;
+            aspect-ratio: 16 / 9; /* 維持 16:9 比例 */
             background: #000;
             border-radius: 4px;
-            overflow: hidden;
+            overflow: hidden; /* 防止內容溢出 */
             margin-top: 10px;
         }
 
@@ -81,3 +72,89 @@
             top: 0;
             left: 0;
             width: 100%;
+            height: 100%;
+            transform-origin: top left;
+        }
+
+        /* 影片與 iframe 本體設定 */
+        video, .cctv-iframe-scaler iframe {
+            display: block;
+            width: 100%;
+            height: 100%;
+            border: none;
+            object-fit: fill;
+        }
+
+        /* 針對手機窄螢幕的 3D 變形修復 (解決 iframe 放大) */
+        @media only screen and (max-width: 600px) {
+            .cctv-iframe-scaler {
+                --scaleFactor: 0.5; /* 若畫面太小或太大可調整此數值 */
+                transform: scale(var(--scaleFactor));
+                width: calc(100% / var(--scaleFactor));
+                height: calc(100% / var(--scaleFactor));
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>即時交通影像與天氣資訊</h1>
+
+    <div class="layout-container">
+        
+        <div class="card weather-card">
+            <h3>📍 新北即時天氣</h3>
+            <p><strong>氣溫：</strong> 27°C (體感 32°C)</p>
+            <p><strong>天氣：</strong> 🌧️ 小雨</p>
+            <p><strong>濕度：</strong> 87%</p>
+        </div>
+
+        <div class="card">
+            <h3>🎥 新北市 CCTV</h3>
+            <div class="cctv-box-media-frame">
+                <video id="video1" controls autoplay muted playsinline></video>
+            </div>
+        </div>
+
+        <div class="card weather-card">
+            <h3>📍 桃園即時天氣</h3>
+            <p><strong>氣溫：</strong> 29°C (體感 34°C)</p>
+            <p><strong>天氣：</strong> 🌧️ 小雨</p>
+            <p><strong>濕度：</strong> 80%</p>
+        </div>
+
+        <div class="card">
+            <h3>🎥 桃園市 CCTV</h3>
+            <div class="cctv-box-media-frame">
+                <div class="cctv-iframe-scaler">
+                    <iframe src="https://cctvtraffic.tycg.gov.tw/camera150/?t=1781604845214" title="桃園市 CCTV" scrolling="no"></iframe>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        var video = document.getElementById('video1');
+        var videoSrc = 'https://cctvatis1.ntpc.gov.tw/hls/C000020/live.m3u8';
+        
+        // 優先判斷：如果瀏覽器原生支援 HLS (如 iOS Safari)，直接播放
+        if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = videoSrc;
+            video.addEventListener('loadedmetadata', function() {
+                video.play();
+            });
+        }
+        // 次要判斷：其他瀏覽器使用 hls.js 播放
+        else if (Hls.isSupported()) {
+            var hls = new Hls();
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                video.play();
+            });
+        }
+    </script>
+
+</body>
+</html>
