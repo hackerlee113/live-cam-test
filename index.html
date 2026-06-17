@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>即時交通影像與天氣資訊</title>
+    <!-- 引入 hls.js 用來讓非 Safari 瀏覽器播放 m3u8 格式的串流 -->
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -19,7 +20,6 @@
             font-size: 1.5em;
         }
         
-        /* 天氣區塊：手機上自動變成上下排列 */
         .weather-container {
             display: flex;
             flex-wrap: wrap;
@@ -33,7 +33,7 @@
             border-radius: 8px;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             text-align: center;
-            flex: 1 1 250px; /* 允許縮放，最小寬度 250px */
+            flex: 1 1 250px;
             max-width: 400px;
         }
         .weather-card h3 {
@@ -45,7 +45,6 @@
             font-size: 1.1em;
         }
 
-        /* 攝影機區塊：手機上自動換行，電腦上並排 */
         .cctv-container {
             display: flex;
             flex-wrap: wrap;
@@ -60,22 +59,36 @@
             width: 100%;
             max-width: 600px;
             text-align: center;
-            box-sizing: border-box; /* 確保 padding 不會撐破容器 */
+            box-sizing: border-box;
         }
         .cctv-box h3 {
             margin-top: 0;
             font-size: 1.2em;
         }
 
-        /* 讓影片與 iframe 自動符合寬度，並維持 16:9 比例 */
-        video, iframe {
+        /* 影片與 iframe 的防溢出容器 (解決 iOS Safari iframe 放大 Bug) */
+        .media-wrapper {
+            position: relative;
             width: 100%;
-            height: auto;
-            aspect-ratio: 16 / 9; /* 關鍵設定：自動維持 16:9 比例 */
-            border: none;
+            aspect-ratio: 16 / 9; /* 維持完美的 16:9 比例 */
             background-color: #000;
             border-radius: 4px;
-            display: block; /* 移除底部多餘空白 */
+            overflow: hidden; /* 強制裁切任何超出的部分 */
+            -webkit-overflow-scrolling: touch;
+        }
+
+        /* 裡面的內容填滿容器 */
+        .media-wrapper video,
+        .media-wrapper iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            /* 針對 Safari 的 iframe 黑科技：強制限制寬度 */
+            width: 1px; 
+            min-width: 100%; 
+            height: 100%;
+            border: none;
+            object-fit: fill;
         }
     </style>
 </head>
@@ -83,6 +96,7 @@
 
     <h1>即時交通影像與天氣資訊</h1>
 
+    <!-- 靜態即時天氣區塊 -->
     <div class="weather-container">
         <div class="weather-card">
             <h3>📍 新北即時天氣</h3>
@@ -98,15 +112,24 @@
         </div>
     </div>
 
+    <!-- 攝影機畫面區塊 -->
     <div class="cctv-container">
+        <!-- 攝影機 1 (新北市 HLS) -->
         <div class="cctv-box">
             <h3>🎥 新北市 CCTV</h3>
-            <video id="video1" controls autoplay muted playsinline></video>
+            <!-- 用 media-wrapper 包起來 -->
+            <div class="media-wrapper">
+                <video id="video1" controls autoplay muted playsinline></video>
+            </div>
         </div>
 
+        <!-- 攝影機 2 (桃園市) -->
         <div class="cctv-box">
             <h3>🎥 桃園市 CCTV</h3>
-            <iframe src="https://cctvtraffic.tycg.gov.tw/camera150/?t=1781604845214" title="桃園市 CCTV" scrolling="no"></iframe>
+            <!-- 用 media-wrapper 包起來 -->
+            <div class="media-wrapper">
+                <iframe src="https://cctvtraffic.tycg.gov.tw/camera150/?t=1781604845214" title="桃園市 CCTV" scrolling="no"></iframe>
+            </div>
         </div>
     </div>
 
@@ -114,14 +137,14 @@
         var video = document.getElementById('video1');
         var videoSrc = 'https://cctvatis1.ntpc.gov.tw/hls/C000020/live.m3u8';
         
-        // 優先判斷：如果瀏覽器 (如 Mac / iOS Safari) 原生支援 HLS 格式，直接載入播放
+        // 優先判斷：如果瀏覽器原生支援 HLS (如 iOS Safari)，直接播放
         if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = videoSrc;
             video.addEventListener('loadedmetadata', function() {
                 video.play();
             });
         }
-        // 次要判斷：如果瀏覽器不原生支援 (如 Chrome, Edge)，才使用 hls.js 解析播放
+        // 次要判斷：其他瀏覽器使用 hls.js 播放
         else if (Hls.isSupported()) {
             var hls = new Hls();
             hls.loadSource(videoSrc);
