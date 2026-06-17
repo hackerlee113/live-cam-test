@@ -48,6 +48,15 @@
         /* 天氣特有樣式 */
         .weather-card h3 {
             color: #007BFF;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        .station-info {
+            font-size: 0.7em;
+            color: #666;
+            font-weight: normal;
         }
         .weather-card p {
             margin: 5px 0;
@@ -103,10 +112,10 @@
     <div class="layout-container">
         
         <div class="card weather-card">
-            <h3>📍 新北即時天氣</h3>
-            <p><strong>氣溫：</strong> 27°C (體感 32°C)</p>
-            <p><strong>天氣：</strong> 🌧️ 小雨</p>
-            <p><strong>濕度：</strong> 87%</p>
+            <h3>📍 新北即時天氣 <span class="station-info" id="ntpc-station">正在尋找最近測站...</span></h3>
+            <p><strong>氣溫：</strong> <span id="ntpc-temp">載入中...</span></p>
+            <p><strong>濕度：</strong> <span id="ntpc-hum">載入中...</span></p>
+            <p><strong>過去 1 小時雨量：</strong> <span id="ntpc-rain">載入中...</span> mm</p>
         </div>
 
         <div class="card">
@@ -117,10 +126,10 @@
         </div>
 
         <div class="card weather-card">
-            <h3>📍 桃園即時天氣</h3>
-            <p><strong>氣溫：</strong> 29°C (體感 34°C)</p>
-            <p><strong>天氣：</strong> 🌧️ 小雨</p>
-            <p><strong>濕度：</strong> 80%</p>
+            <h3>📍 桃園即時天氣 <span class="station-info" id="tycg-station">正在尋找最近測站...</span></h3>
+            <p><strong>氣溫：</strong> <span id="tycg-temp">載入中...</span></p>
+            <p><strong>濕度：</strong> <span id="tycg-hum">載入中...</span></p>
+            <p><strong>過去 1 小時雨量：</strong> <span id="tycg-rain">載入中...</span> mm</p>
         </div>
 
         <div class="card">
@@ -135,25 +144,104 @@
     </div>
 
     <script>
+        /* =========================================
+           1. 影像播放邏輯
+           ========================================= */
         var video = document.getElementById('video1');
         var videoSrc = 'https://cctvatis1.ntpc.gov.tw/hls/C000020/live.m3u8';
         
-        // 優先判斷：如果瀏覽器原生支援 HLS (如 iOS Safari)，直接播放
         if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = videoSrc;
-            video.addEventListener('loadedmetadata', function() {
-                video.play();
-            });
-        }
-        // 次要判斷：其他瀏覽器使用 hls.js 播放
-        else if (Hls.isSupported()) {
+            video.addEventListener('loadedmetadata', function() { video.play(); });
+        } else if (Hls.isSupported()) {
             var hls = new Hls();
             hls.loadSource(videoSrc);
             hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                video.play();
-            });
+            hls.on(Hls.Events.MANIFEST_PARSED, function() { video.play(); });
         }
+
+        /* =========================================
+           2. 氣象署 API 即時資料串接邏輯
+           ========================================= */
+        
+        // 使用 Base64 混淆你的 API Key (防君子不防小人)
+        const _0x1a2b = 'Q1dBLTE0NjUwRUYwLTAxOUMtNERDRi1BQjUxLUE5MDM5NkY5NkY0NA==';
+        const CWA_API_KEY = atob(_0x1a2b); 
+
+        // 目標經緯度設定
+        const targets = {
+            ntpc: { lat: 25.015484, lon: 121.473356, prefix: 'ntpc' }, // 新北
+            tycg: { lat: 25.010377, lon: 121.213633, prefix: 'tycg' }  // 桃園
+        };
+
+        // 計算距離 (Haversine 公式)
+        function getDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; 
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return R * c;
+        }
+
+        async function fetchWeatherData() {
+            try {
+                // 呼叫自動氣象站資料 API
+                const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/O-A0001-001?Authorization=${CWA_API_KEY}&format=JSON`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                const stations = data.records.Station;
+
+                // 針對新北、桃園進行測站距離比對
+                Object.values(targets).forEach(target => {
+                    let closestStation = null;
+                    let minDistance = Infinity;
+
+                    stations.forEach(station => {
+                        const coords = station.GeoInfo.Coordinates.find(c => c.CoordinateName === 'WGS84') || station.GeoInfo.Coordinates[1];
+                        if (!coords) return;
+                        
+                        const distance = getDistance(target.lat, target.lon, coords.StationLatitude, coords.StationLongitude);
+                        
+                        if (distance < minDistance) {
+                            minDistance = distance;
+                            closestStation = station;
+                        }
+                    });
+
+                    if (closestStation) {
+                        updateWeatherUI(target.prefix, closestStation, minDistance);
+                    }
+                });
+
+            } catch (error) {
+                console.error("抓取氣象資料失敗:", error);
+                document.getElementById('ntpc-station').innerText = "❌ 資料載入失敗";
+                document.getElementById('tycg-station').innerText = "❌ 資料載入失敗";
+            }
+        }
+
+        function updateWeatherUI(prefix, station, distance) {
+            let temp = station.WeatherElement.AirTemperature;
+            let hum = station.WeatherElement.RelativeHumidity;
+            let rain = station.WeatherElement.Now?.Precipitation ?? -99;
+
+            // 防呆處理：若測站維修中會回傳 -99
+            temp = (temp === -99 || temp === -999) ? "--" : temp + " °C";
+            hum = (hum === -99 || hum === -999) ? "--" : hum + " %";
+            rain = (rain < 0) ? "0.0" : rain;
+
+            document.getElementById(`${prefix}-station`).innerText = `(採用測站：${station.StationName}，距離約 ${distance.toFixed(1)} km)`;
+            document.getElementById(`${prefix}-temp`).innerText = temp;
+            document.getElementById(`${prefix}-hum`).innerText = hum;
+            document.getElementById(`${prefix}-rain`).innerText = rain;
+        }
+
+        fetchWeatherData();
+
     </script>
 
 </body>
