@@ -164,14 +164,14 @@
            2. 氣象署 API 即時資料串接邏輯
            ========================================= */
         
-        // 使用 Base64 混淆你的 API Key
+        // 使用 Base64 混淆你的 API Key (防君子不防小人)
         const _0x1a2b = 'Q1dBLTE0NjUwRUYwLTAxOUMtNERDRi1BQjUxLUE5MDM5NkY5NkY0NA==';
         const CWA_API_KEY = atob(_0x1a2b); 
 
         // 目標經緯度設定
         const targets = {
-            ntpc: { lat: 25.015484, lon: 121.473356, prefix: 'ntpc' }, // 新北指定座標
-            tycg: { lat: 25.010377, lon: 121.213633, prefix: 'tycg' }  // 桃園指定座標
+            ntpc: { lat: 25.015484, lon: 121.473356, prefix: 'ntpc' }, // 新北
+            tycg: { lat: 25.010377, lon: 121.213633, prefix: 'tycg' }  // 桃園
         };
 
         // 計算距離 (Haversine 公式)
@@ -229,6 +229,20 @@
             let hum = station.WeatherElement.RelativeHumidity;
             let rain = station.WeatherElement.Now?.Precipitation ?? -99;
 
-            // 防呆處理：若測站維修中會回傳 -99 或 -999
+            // 防呆處理：若測站維修中會回傳 -99
             temp = (temp === -99 || temp === -999) ? "--" : temp + " °C";
             hum = (hum === -99 || hum === -999) ? "--" : hum + " %";
+            rain = (rain < 0) ? "0.0" : rain;
+
+            document.getElementById(`${prefix}-station`).innerText = `(採用測站：${station.StationName}，距離約 ${distance.toFixed(1)} km)`;
+            document.getElementById(`${prefix}-temp`).innerText = temp;
+            document.getElementById(`${prefix}-hum`).innerText = hum;
+            document.getElementById(`${prefix}-rain`).innerText = rain;
+        }
+
+        fetchWeatherData();
+
+    </script>
+
+</body>
+</html>
