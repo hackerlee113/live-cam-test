@@ -227,11 +227,19 @@
 </head>
 <body>
 
-    <h1>即時影像與天氣資訊</h1>
+    <h1>即時交通影像與天氣資訊</h1>
 
     <div class="layout-container">
         
-        <!-- 板橋天氣卡片 -->
+        <!-- 新北 CCTV 卡片 (移到最上方) -->
+        <div class="card cctv-box">
+            <h3>🎥 新北市 CCTV</h3>
+            <div class="cctv-box-media-frame">
+                <video id="video1" controls autoplay muted playsinline></video>
+            </div>
+        </div>
+
+        <!-- 板橋天氣卡片 (移到 CCTV 下方) -->
         <div class="card weather-card">
             <div class="weather-content-wrapper">
                 <!-- 左側：文字資訊 -->
@@ -241,7 +249,7 @@
                     <div class="weather-stats">
                         <p><strong>氣溫：</strong> <span id="ntpc-temp">-- °C</span></p>
                         <p><strong>濕度：</strong> <span id="ntpc-hum">-- %</span></p>
-                        <p><strong>天氣分析：</strong> <span class="warning-badge" id="ntpc-warning">載入中...</span></p>
+                        <p><strong>狀態分析：</strong> <span class="warning-badge" id="ntpc-warning">載入中...</span></p>
                     </div>
                 </div>
                 
@@ -257,15 +265,17 @@
             </div>
         </div>
 
-        <!-- 新北 CCTV 卡片 -->
+        <!-- 桃園 CCTV 卡片 (移到天氣上方) -->
         <div class="card cctv-box">
-            <h3>🎥 新北市 CCTV</h3>
+            <h3>🎥 桃園市 CCTV</h3>
             <div class="cctv-box-media-frame">
-                <video id="video1" controls autoplay muted playsinline></video>
+                <div class="cctv-iframe-scaler">
+                    <iframe src="https://cctvtraffic.tycg.gov.tw/camera150/?t=1781604845214" title="桃園市 CCTV" scrolling="no"></iframe>
+                </div>
             </div>
         </div>
 
-        <!-- 桃園天氣卡片 -->
+        <!-- 桃園天氣卡片 (移到 CCTV 下方) -->
         <div class="card weather-card">
             <div class="weather-content-wrapper">
                 <!-- 左側：文字資訊 -->
@@ -275,7 +285,7 @@
                     <div class="weather-stats">
                         <p><strong>氣溫：</strong> <span id="tycg-temp">-- °C</span></p>
                         <p><strong>濕度：</strong> <span id="tycg-hum">-- %</span></p>
-                        <p><strong>天氣分析：</strong> <span class="warning-badge" id="tycg-warning">載入中...</span></p>
+                        <p><strong>狀態分析：</strong> <span class="warning-badge" id="tycg-warning">載入中...</span></p>
                     </div>
                 </div>
                 
@@ -287,16 +297,6 @@
                     <a class="msn-btn" href="https://www.msn.com/zh-tw/weather/maps/radar/in-%E6%A1%83%E5%9C%92%E5%B8%82?weadegreetype=C" target="_blank">
                         🔗 開啟 MSN 全螢幕雷達圖
                     </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- 桃園 CCTV 卡片 -->
-        <div class="card cctv-box">
-            <h3>🎥 桃園市 CCTV</h3>
-            <div class="cctv-box-media-frame">
-                <div class="cctv-iframe-scaler">
-                    <iframe src="https://cctvtraffic.tycg.gov.tw/camera150/?t=1781604845214" title="桃園市 CCTV" scrolling="no"></iframe>
                 </div>
             </div>
         </div>
