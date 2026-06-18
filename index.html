@@ -37,13 +37,13 @@
         .card {
             background: #fff;
             padding: 15px 20px;
-            border-radius: 12px; /* 稍微增加圓角讓視覺更柔和 */
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08); /* 優化陰影質感 */
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
             width: 100%;
             max-width: 600px;
             box-sizing: border-box;
             text-align: center;
-            transition: transform 0.2s ease; /* 增加輕微互動感 */
+            transition: transform 0.2s ease;
         }
         .card:hover {
             transform: translateY(-2px);
@@ -94,7 +94,7 @@
         .badge-danger { background-color: #dc3545; } /* 紅色：大雷雨 */
 
         /* =========================================
-           影像容器防溢出設定 (防 iOS iframe 縮放 Bug)
+           影像與 iframe 容器設定
            ========================================= */
         .cctv-box-media-frame {
             position: relative;
@@ -135,16 +135,30 @@
 </head>
 <body>
 
-    <h1>即時影像與天氣資訊</h1>
+    <h1>即時交通影像與天氣資訊</h1>
 
     <div class="layout-container">
         
-        <!-- 新北天氣卡片 -->
+        <!-- 板橋天氣卡片 (文字API + MSN雷達圖) -->
         <div class="card weather-card">
-            <h3>📍 新北即時天氣 <span class="station-info" id="ntpc-station">尋找最近測站中...</span></h3>
+            <h3>📍 板橋即時天氣與雷達 <span class="station-info" id="ntpc-station">尋找最近測站中...</span></h3>
+            
+            <!-- 使用 CWA API 取乾淨的文字資料 -->
             <p><strong>氣溫：</strong> <span id="ntpc-temp">-- °C</span></p>
             <p><strong>濕度：</strong> <span id="ntpc-hum">-- %</span></p>
-            <p><strong>下雨訊息：</strong> <span class="warning-badge" id="ntpc-warning">載入中...</span></p>
+            <p><strong>狀態分析：</strong> <span class="warning-badge" id="ntpc-warning">載入中...</span></p>
+            
+            <!-- 替換為 Windy 動態雷達圖 (支援 iframe 鑲嵌) -->
+            <div style="width: 100%; height: 400px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; margin-top: 15px;">
+                <iframe width="100%" height="100%" src="https://embed.windy.com/embed2.html?lat=25.015484&lon=121.473356&zoom=11&level=surface&overlay=radar&product=radar&menu=&message=&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1" frameborder="0" style="border: none;"></iframe>
+            </div>
+            
+            <!-- 將 MSN 連結改成漂亮的外部按鈕 -->
+            <div style="margin-top: 15px;">
+                <a href="https://www.msn.com/zh-tw/weather/maps/radar/in-%E6%9D%BF%E6%A9%8B%E5%8D%80,%E6%96%B0%E5%8C%97%E5%B8%82?loc=eyJhIjoi5p2%2F5qmL6LuK56uZIiwibCI6Iuadv%2Bapi%2BWNgCIsInIiOiLmlrDljJfluIIiLCJyMiI6IuaWsOWMl%2BW4giIsImMiOiLlj7DngaMiLCJpIjoiVFciLCJ0IjoxMDIsImciOiJ6aC10dyIsIngiOiIxMjEuNDY0IiwieSI6IjI1LjAxNDMifQ%3D%3D&weadegreetype=C&cvid=4ce2b3bbdc004d7cd7c168aa62989f6c&zoom=8&alertid=16171781766000&rcmode=1" target="_blank" style="display: inline-block; background-color: #007BFF; color: #fff; padding: 8px 16px; border-radius: 20px; text-decoration: none; font-size: 0.9em; font-weight: bold; transition: background-color 0.2s;">
+                    🔗 開啟 MSN 全螢幕雷達圖
+                </a>
+            </div>
         </div>
 
         <!-- 新北 CCTV 卡片 -->
@@ -155,12 +169,26 @@
             </div>
         </div>
 
-        <!-- 桃園天氣卡片 -->
+        <!-- 桃園天氣卡片 (文字API + MSN雷達圖) -->
         <div class="card weather-card">
-            <h3>📍 桃園即時天氣 <span class="station-info" id="tycg-station">尋找最近測站中...</span></h3>
+            <h3>📍 桃園即時天氣與雷達 <span class="station-info" id="tycg-station">尋找最近測站中...</span></h3>
+            
+            <!-- 使用 CWA API 取乾淨的文字資料 -->
             <p><strong>氣溫：</strong> <span id="tycg-temp">-- °C</span></p>
             <p><strong>濕度：</strong> <span id="tycg-hum">-- %</span></p>
-            <p><strong>下雨訊息：</strong> <span class="warning-badge" id="tycg-warning">載入中...</span></p>
+            <p><strong>狀態分析：</strong> <span class="warning-badge" id="tycg-warning">載入中...</span></p>
+            
+            <!-- 替換為 Windy 動態雷達圖 (支援 iframe 鑲嵌，已定位至桃園座標) -->
+            <div style="width: 100%; height: 400px; border-radius: 8px; overflow: hidden; border: 1px solid #ddd; margin-top: 15px;">
+                <iframe width="100%" height="100%" src="https://embed.windy.com/embed2.html?lat=25.010377&lon=121.213633&zoom=11&level=surface&overlay=radar&product=radar&menu=&message=&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1" frameborder="0" style="border: none;"></iframe>
+            </div>
+            
+            <!-- 桃園專屬的 MSN 全螢幕連結 -->
+            <div style="margin-top: 15px;">
+                <a href="https://www.msn.com/zh-tw/weather/maps/radar/in-%E6%A1%83%E5%9C%92%E5%B8%82?weadegreetype=C" target="_blank" style="display: inline-block; background-color: #007BFF; color: #fff; padding: 8px 16px; border-radius: 20px; text-decoration: none; font-size: 0.9em; font-weight: bold; transition: background-color 0.2s;">
+                    🔗 開啟 MSN 全螢幕雷達圖
+                </a>
+            </div>
         </div>
 
         <!-- 桃園 CCTV 卡片 -->
@@ -176,25 +204,23 @@
     </div>
 
     <script>
-        // 等待 DOM 載入完成後再執行，確保抓得到標籤
+        // 等待 DOM 載入完成後再執行
         document.addEventListener('DOMContentLoaded', () => {
             initVideoPlayer();
             fetchWeatherData();
         });
 
         /* =========================================
-           1. 影像播放邏輯 (模組化)
+           1. 影像播放邏輯
            ========================================= */
         function initVideoPlayer() {
             const video = document.getElementById('video1');
             const videoSrc = 'https://cctvatis1.ntpc.gov.tw/hls/C000020/live.m3u8';
             
             if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                // 原生支援 HLS (如 Safari)
                 video.src = videoSrc;
                 video.addEventListener('loadedmetadata', () => video.play());
             } else if (Hls.isSupported()) {
-                // 不支援原生 HLS，使用 hls.js (如 Chrome, Edge)
                 const hls = new Hls();
                 hls.loadSource(videoSrc);
                 hls.attachMedia(video);
@@ -203,20 +229,23 @@
         }
 
         /* =========================================
-           2. 氣象署 API 資料邏輯 (優化架構)
+           2. 氣象署 API 資料邏輯 (同時提供文字警報給板橋與桃園)
            ========================================= */
         
         // Base64 混淆 API Key
         const _0x1a2b = 'Q1dBLTE0NjUwRUYwLTAxOUMtNERDRi1BQjUxLUE5MDM5NkY5NkY0NA==';
         const CWA_API_KEY = atob(_0x1a2b); 
 
-        // 觀測目標設定
+        // --- 新增：Azure Maps API (MSN 天氣來源) 設定 ---
+        const AZURE_ENDPOINT = 'https://atlas.microsoft.com';
+        const AZURE_API_KEY = ''; // ⚠️ 請在此填寫您的 Azure Maps Subscription Key
+
+        // 觀測目標設定 (恢復板橋座標抓取 CWA 文字資料)
         const TARGETS = [
             { id: 'ntpc', name: '新北市', lat: 25.015484, lon: 121.473356 },
             { id: 'tycg', name: '桃園市', lat: 25.010377, lon: 121.213633 }
         ];
 
-        // Haversine 公式計算兩點距離 (公里)
         function getDistance(lat1, lon1, lat2, lon2) {
             const R = 6371; 
             const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -227,16 +256,12 @@
             return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
         }
 
-        // 獨立出的功能：尋找距離指定座標最近的氣象站
         function findClosestStation(targetLat, targetLon, stations) {
             let closest = null;
             let minDist = Infinity;
-
             for (const station of stations) {
-                // 優先使用 WGS84 座標系統，若無則降級使用第二組座標
                 const coords = station.GeoInfo.Coordinates.find(c => c.CoordinateName === 'WGS84') || station.GeoInfo.Coordinates[1];
                 if (!coords) continue;
-                
                 const distance = getDistance(targetLat, targetLon, coords.StationLatitude, coords.StationLongitude);
                 if (distance < minDist) {
                     minDist = distance;
@@ -246,10 +271,8 @@
             return { station: closest, distance: minDist };
         }
 
-        // 獨立出的功能：解析縣市警特報狀態
         function parseWarning(locationName, warningsList) {
             const locWarning = warningsList.find(l => l.locationName === locationName);
-            
             if (locWarning?.hazardConditions?.hazards) {
                 const hazards = locWarning.hazardConditions.hazards.map(h => h.info.phenomena);
                 if (hazards.length > 0) {
@@ -260,16 +283,39 @@
                     };
                 }
             }
-            return { message: '✅ 目前無訊息', cssClass: 'badge-safe' };
+            return { message: '✅ 天氣穩定無特報', cssClass: 'badge-safe' };
         }
 
-        // 主資料流控制
+        // 新增功能：抓取 Azure Maps (MSN) 天氣警報
+        async function fetchAzureAlerts(lat, lon) {
+            if (!AZURE_API_KEY) return null; // 若無金鑰，回傳 null 以便退回使用中央氣象署資料
+
+            try {
+                // 使用您提供的 API 格式，並附上 subscription-key
+                const url = `${AZURE_ENDPOINT}/weather/severe/alerts/json?api-version=1.1&query=${lat},${lon}&language=zh-TW&details=true&subscription-key=${AZURE_API_KEY}`;
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.results && data.results.length > 0) {
+                    const alertMsg = data.results[0].description.localized || '未知特報';
+                    const isDanger = alertMsg.includes('雷') || alertMsg.includes('豪雨');
+                    return {
+                        message: `⚠️ (MSN) ${alertMsg}`,
+                        cssClass: isDanger ? 'badge-danger' : 'badge-alert'
+                    };
+                }
+                return { message: '✅ (MSN) 天氣穩定無特報', cssClass: 'badge-safe' };
+            } catch (error) {
+                console.error("Azure Maps API 抓取失敗:", error);
+                return null;
+            }
+        }
+
         async function fetchWeatherData() {
             try {
                 const weatherUrl = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/O-A0001-001?Authorization=${CWA_API_KEY}&format=JSON`;
                 const warningUrl = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/W-C0033-001?Authorization=${CWA_API_KEY}&format=JSON`;
                 
-                // 平行抓取溫濕度與警特報，提升速度
                 const [weatherRes, warningRes] = await Promise.all([ fetch(weatherUrl), fetch(warningUrl) ]);
                 const weatherData = await weatherRes.json();
                 const warningData = await warningRes.json();
@@ -277,14 +323,19 @@
                 const allStations = weatherData.records.Station;
                 const allWarnings = warningData.records?.location || []; 
 
-                // 更新每個目標的 UI
-                TARGETS.forEach(target => {
+                TARGETS.forEach(async target => {
                     const { station, distance } = findClosestStation(target.lat, target.lon, allStations);
-                    const warningInfo = parseWarning(target.name, allWarnings);
                     
-                    if (station) {
-                        updateWeatherUI(target.id, station, distance, warningInfo);
+                    let warningInfo = null;
+                    // 讓板橋與桃園都優先嘗試呼叫 MSN (Azure Maps) API
+                    warningInfo = await fetchAzureAlerts(target.lat, target.lon);
+                    
+                    // 若 Azure API 失敗或未設定金鑰，退回使用中央氣象署的警特報
+                    if (!warningInfo) {
+                        warningInfo = parseWarning(target.name, allWarnings);
                     }
+
+                    if (station) updateWeatherUI(target.id, station, distance, warningInfo);
                 });
 
             } catch (error) {
@@ -298,24 +349,19 @@
             }
         }
 
-        // UI 渲染函式
         function updateWeatherUI(prefix, station, distance, warningInfo) {
             let temp = station.WeatherElement.AirTemperature;
             let hum = station.WeatherElement.RelativeHumidity;
 
-            // 防呆處理：排除維修中數值 (-99 / -999)
             temp = (temp === -99 || temp === -999) ? "--" : temp;
             hum = (hum === -99 || hum === -999) ? "--" : hum;
 
-            // 寫入溫濕度與測站資訊
             document.getElementById(`${prefix}-station`).innerText = `(測站：${station.StationName}，距離約 ${distance.toFixed(1)} km)`;
             document.getElementById(`${prefix}-temp`).innerText = `${temp} °C`;
             document.getElementById(`${prefix}-hum`).innerText = `${hum} %`;
             
-            // 更新 Badge 狀態
             const badgeElement = document.getElementById(`${prefix}-warning`);
             badgeElement.innerText = warningInfo.message;
-            // 套用基礎 class 與動態狀態 class
             badgeElement.className = `warning-badge ${warningInfo.cssClass}`;
         }
     </script>
