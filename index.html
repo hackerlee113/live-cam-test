@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>即時交通影像與天氣資訊</title>
+    <title>即時影像與天氣資訊</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -115,7 +115,7 @@
             <h3>📍 新北即時天氣 <span class="station-info" id="ntpc-station">正在尋找最近測站...</span></h3>
             <p><strong>氣溫：</strong> <span id="ntpc-temp">載入中...</span></p>
             <p><strong>濕度：</strong> <span id="ntpc-hum">載入中...</span></p>
-            <p><strong>過去 1 小時雨量：</strong> <span id="ntpc-rain">載入中...</span> mm</p>
+            <p><strong>下雨訊息：</strong> <span id="ntpc-warning" style="font-weight: bold;">載入中...</span></p>
         </div>
 
         <div class="card">
@@ -129,7 +129,7 @@
             <h3>📍 桃園即時天氣 <span class="station-info" id="tycg-station">正在尋找最近測站...</span></h3>
             <p><strong>氣溫：</strong> <span id="tycg-temp">載入中...</span></p>
             <p><strong>濕度：</strong> <span id="tycg-hum">載入中...</span></p>
-            <p><strong>過去 1 小時雨量：</strong> <span id="tycg-rain">載入中...</span> mm</p>
+            <p><strong>下雨訊息：</strong> <span id="tycg-warning" style="font-weight: bold;">載入中...</span></p>
         </div>
 
         <div class="card">
@@ -170,8 +170,8 @@
 
         // 目標經緯度設定
         const targets = {
-            ntpc: { lat: 25.015484, lon: 121.473356, prefix: 'ntpc' }, // 新北
-            tycg: { lat: 25.010377, lon: 121.213633, prefix: 'tycg' }  // 桃園
+            ntpc: { lat: 25.015484, lon: 121.473356, prefix: 'ntpc', name: '新北市' },
+            tycg: { lat: 25.010377, lon: 121.213633, prefix: 'tycg', name: '桃園市' }
         };
 
         // 計算距離 (Haversine 公式)
@@ -188,18 +188,29 @@
 
         async function fetchWeatherData() {
             try {
-                // 呼叫自動氣象站資料 API
-                const url = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/O-A0001-001?Authorization=${CWA_API_KEY}&format=JSON`;
-                const response = await fetch(url);
-                const data = await response.json();
+                // 1. 呼叫自動氣象站資料 API (取得溫濕度)
+                const weatherUrl = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/O-A0001-001?Authorization=${CWA_API_KEY}&format=JSON`;
+                // 2. 呼叫天氣警特報 API (取得大雷雨及各項特報)
+                const warningUrl = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/W-C0033-001?Authorization=${CWA_API_KEY}&format=JSON`;
                 
-                const stations = data.records.Station;
+                // 併發請求，加快載入速度
+                const [weatherResponse, warningResponse] = await Promise.all([
+                    fetch(weatherUrl),
+                    fetch(warningUrl)
+                ]);
 
-                // 針對新北、桃園進行測站距離比對
+                const weatherData = await weatherResponse.json();
+                const warningData = await warningResponse.json();
+                
+                const stations = weatherData.records.Station;
+                const warnings = warningData.records?.location || []; // 確保讀取到縣市警示陣列
+
+                // 針對新北、桃園進行測站距離比對與警告判斷
                 Object.values(targets).forEach(target => {
                     let closestStation = null;
                     let minDistance = Infinity;
 
+                    // 找出最近的測站抓取溫濕度
                     stations.forEach(station => {
                         const coords = station.GeoInfo.Coordinates.find(c => c.CoordinateName === 'WGS84') || station.GeoInfo.Coordinates[1];
                         if (!coords) return;
@@ -212,8 +223,23 @@
                         }
                     });
 
+                    // 找出該縣市的警特報
+                    let warningMsg = '✅ 目前無訊息';
+                    let warningColor = '#28a745'; // 預設綠色
+
+                    const locWarning = warnings.find(l => l.locationName === target.name);
+                    if (locWarning && locWarning.hazardConditions && locWarning.hazardConditions.hazards) {
+                        const hazards = locWarning.hazardConditions.hazards.map(h => h.info.phenomena);
+                        if (hazards.length > 0) {
+                            // 若包含「雷雨」則用紅色警示，若只是大雨等其他特報則用橘色
+                            const hasThunder = hazards.some(h => h.includes('雷'));
+                            warningMsg = `⚠️ ${hazards.join('、')}`;
+                            warningColor = hasThunder ? '#dc3545' : '#d39e00'; // 紅色 or 深橘色
+                        }
+                    }
+
                     if (closestStation) {
-                        updateWeatherUI(target.prefix, closestStation, minDistance);
+                        updateWeatherUI(target.prefix, closestStation, minDistance, warningMsg, warningColor);
                     }
                 });
 
@@ -221,23 +247,27 @@
                 console.error("抓取氣象資料失敗:", error);
                 document.getElementById('ntpc-station').innerText = "❌ 資料載入失敗";
                 document.getElementById('tycg-station').innerText = "❌ 資料載入失敗";
+                document.getElementById('ntpc-warning').innerText = "讀取失敗";
+                document.getElementById('tycg-warning').innerText = "讀取失敗";
             }
         }
 
-        function updateWeatherUI(prefix, station, distance) {
+        function updateWeatherUI(prefix, station, distance, warningMsg, warningColor) {
             let temp = station.WeatherElement.AirTemperature;
             let hum = station.WeatherElement.RelativeHumidity;
-            let rain = station.WeatherElement.Now?.Precipitation ?? -99;
 
             // 防呆處理：若測站維修中會回傳 -99
             temp = (temp === -99 || temp === -999) ? "--" : temp + " °C";
             hum = (hum === -99 || hum === -999) ? "--" : hum + " %";
-            rain = (rain < 0) ? "0.0" : rain;
 
             document.getElementById(`${prefix}-station`).innerText = `(採用測站：${station.StationName}，距離約 ${distance.toFixed(1)} km)`;
             document.getElementById(`${prefix}-temp`).innerText = temp;
             document.getElementById(`${prefix}-hum`).innerText = hum;
-            document.getElementById(`${prefix}-rain`).innerText = rain;
+            
+            // 更新大雷雨訊息與顏色
+            const warningElement = document.getElementById(`${prefix}-warning`);
+            warningElement.innerText = warningMsg;
+            warningElement.style.color = warningColor;
         }
 
         fetchWeatherData();
