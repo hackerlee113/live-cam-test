@@ -1,460 +1,63 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title></title>
-    <!-- 引入 hls.js 用來讓非 Safari 瀏覽器播放 m3u8 格式的串流 -->
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <style>
-        /* =========================================
-           基本排版與字體設定
-           ========================================= */
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f4f4f9;
-            margin: 0;
-            padding: 15px; /* 手機版稍微減少外距 */
-            color: #333;
+let tycgIframe;
+let currentSource = "primary";
+
+function initTaoyuanCCTV() {
+    tycgIframe = document.getElementById('tycg-cctv');
+
+    loadPrimary();
+
+    let loaded = false;
+
+    tycgIframe.onload = () => {
+        loaded = true;
+        updateStatus();
+        console.log("✅ CCTV 已載入");
+    };
+
+    // 5 秒 fallback
+    setTimeout(() => {
+        if (!loaded && currentSource === "primary") {
+            console.warn("⚠️ 主來源失敗，自動切備用");
+            loadBackup();
         }
-        h1 {
-            text-align: center;
-            color: #2c3e50;
-            font-size: 1.4em; /* 微調標題大小 */
-            margin-bottom: 20px;
-        }
+    }, 5000);
+}
 
-        /* =========================================
-           卡片與佈局主容器
-           ========================================= */
-        .layout-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-        }
+/* ========================
+   載入來源
+======================== */
+function loadPrimary() {
+    currentSource = "primary";
+    tycgIframe.src = "https://cctvtraffic.tycg.gov.tw/camera150/?t=" + Date.now();
+    updateStatus();
+}
 
-        .card {
-            background: #fff;
-            padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            width: 100%;
-            max-width: 800px;
-            box-sizing: border-box;
-            text-align: center;
-            transition: transform 0.2s ease;
-        }
+function loadBackup() {
+    currentSource = "backup";
+    tycgIframe.src = "https://cctvtraffic.tycg.gov.tw/camera278/?t=" + Math.random();
+    updateStatus();
+}
 
-        /* =========================================
-           天氣資訊特有樣式 (支援 RWD 雙欄)
-           ========================================= */
-        .weather-content-wrapper {
-            display: flex;
-            flex-direction: row; /* 預設桌面版為左右排列 */
-            align-items: stretch;
-            justify-content: space-between;
-            gap: 20px;
-            text-align: center;
-        }
+/* ========================
+   按鈕切換
+======================== */
+function switchToPrimary() {
+    loadPrimary();
+}
 
-        .weather-left-col {
-            flex: 1 1 40%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
+function switchToBackup() {
+    loadBackup();
+}
 
-        .weather-right-col {
-            flex: 1 1 55%;
-            width: 100%;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: space-between; /* 讓內容上下撐開對齊 */
-            gap: 15px;
-        }
+/* ========================
+   UI 顯示
+======================== */
+function updateStatus() {
+    const status = document.getElementById('tycg-source-status');
 
-        .weather-left-col h3 {
-            color: #007BFF;
-            margin: 0 0 5px 0;
-            font-size: 1.3em;
-        }
-
-        .station-info {
-            font-size: 0.85em;
-            color: #888;
-            font-weight: normal;
-            margin-bottom: 20px;
-            display: block;
-        }
-
-        .weather-stats {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 15px; /* 增加底部間距 */
-        }
-
-        .weather-stats p {
-            margin: 0;
-            font-size: 1.15em;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-        }
-
-        /* 警示訊息標籤 (Badge UI) */
-        .warning-badge {
-            display: inline-block;
-            padding: 6px 14px;
-            border-radius: 20px;
-            font-size: 0.9em;
-            font-weight: 600;
-            color: #fff;
-            background-color: #6c757d;
-            transition: background-color 0.3s ease;
-        }
-        .badge-safe { background-color: #28a745; }   /* 綠色 */
-        .badge-alert { background-color: #fd7e14; }  /* 橘色 */
-        .badge-danger { background-color: #dc3545; } /* 紅色 */
-
-        /* =========================================
-           雷達圖與按鈕設定
-           ========================================= */
-        .radar-container {
-            width: 100%;
-            height: 280px; 
-            border-radius: 8px;
-            overflow: hidden;
-            border: 1px solid #e0e0e0;
-            background-color: #f8f9fa;
-        }
-
-        .msn-btn {
-            display: inline-block;
-            background-color: #007BFF;
-            color: #fff;
-            padding: 12px 24px; /* 加大觸控範圍 */
-            border-radius: 25px;
-            text-decoration: none;
-            font-size: 1em;
-            font-weight: bold;
-            transition: background-color 0.2s, box-shadow 0.2s;
-            box-shadow: 0 2px 5px rgba(0,123,255,0.3);
-            width: 100%; /* 手機版佔滿寬度 */
-            max-width: 300px;
-            box-sizing: border-box;
-        }
-
-        .msn-btn:hover {
-            background-color: #0056b3;
-            box-shadow: 0 4px 8px rgba(0,123,255,0.4);
-        }
-
-        /* =========================================
-           影像容器防溢出設定 (防 iOS iframe 縮放 Bug)
-           ========================================= */
-        .cctv-box h3 {
-            margin: 0 0 15px 0;
-            font-size: 1.2em;
-        }
-        .cctv-box-media-frame {
-            position: relative;
-            width: 100%;
-            height: auto;
-            aspect-ratio: 16 / 9;
-            background: #000;
-            border-radius: 8px;
-            overflow: hidden;
-        }
-        .cctv-iframe-scaler {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            transform-origin: top left;
-        }
-        video, .cctv-iframe-scaler iframe, .radar-container iframe {
-            display: block;
-            width: 100%;
-            height: 100%;
-            border: none;
-            object-fit: fill;
-        }
-
-        /* =========================================
-           針對手機窄螢幕的 RWD 全面優化
-           ========================================= */
-        @media only screen and (max-width: 768px) {
-            /* 天氣卡片改為垂直堆疊 */
-            .weather-content-wrapper {
-                flex-direction: column; 
-            }
-            .weather-left-col, .weather-right-col {
-                width: 100%;
-                flex: auto;
-            }
-            .weather-left-col {
-                padding-bottom: 15px;
-                border-bottom: 1px dashed #eee; /* 增加視覺分隔線 */
-                margin-bottom: 10px;
-            }
-            /* 手機版雷達圖高度調整 */
-            .radar-container {
-                height: 320px; 
-            }
-            /* 讓按鈕在手機上佔滿寬度，方便按壓 */
-            .msn-btn {
-                max-width: 100%;
-            }
-        }
-
-        @media only screen and (max-width: 600px) {
-            /* 針對桃園 CCTV iframe 解決 iOS Safari 放大問題 */
-            .cctv-iframe-scaler {
-                --scaleFactor: 0.5;
-                transform: scale(var(--scaleFactor));
-                width: calc(100% / var(--scaleFactor));
-                height: calc(100% / var(--scaleFactor));
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="layout-container">
-        
-        <!-- 新北 CCTV 卡片 (移到最上方) -->
-        <div class="card cctv-box">
-            <h3>🎥 新北市 CCTV</h3>
-            <div class="cctv-box-media-frame">
-                <video id="video1" controls autoplay muted playsinline></video>
-            </div>
-        </div>
-
-        <!-- 板橋天氣卡片 (移到 CCTV 下方) -->
-        <div class="card weather-card">
-            <div class="weather-content-wrapper">
-                <!-- 左側：文字資訊 -->
-                <div class="weather-left-col">
-                    <h3>📍 板橋即時天氣與雷達</h3>
-                    <span class="station-info" id="ntpc-station">尋找最近測站中...</span>
-                    <div class="weather-stats">
-                        <p><strong>氣溫：</strong> <span id="ntpc-temp">-- °C</span></p>
-                        <p><strong>濕度：</strong> <span id="ntpc-hum">-- %</span></p>
-                        <p><strong>狀態分析：</strong> <span class="warning-badge" id="ntpc-warning">載入中...</span></p>
-                    </div>
-                </div>
-                
-                <!-- 右側：雷達圖與按鈕 -->
-                <div class="weather-right-col">
-                    <div class="radar-container">
-                        <iframe src="https://embed.windy.com/embed2.html?lat=25.015484&lon=121.473356&zoom=11&level=surface&overlay=radar&product=radar&menu=&message=&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1"></iframe>
-                    </div>
-                    <a class="msn-btn" href="https://www.msn.com/zh-tw/weather/maps/radar/in-%E6%9D%BF%E6%A9%8B%E5%8D%80,%E6%96%B0%E5%8C%97%E5%B8%82?loc=eyJhIjoi5p2%2F5qmL6LuK56uZIiwibCI6Iuadv%2Bapi%2BWNgCIsInIiOiLmlrDljJfluIIiLCJyMiI6IuaWsOWMl%2BW4giIsImMiOiLlj7DngaMiLCJpIjoiVFciLCJ0IjoxMDIsImciOiJ6aC10dyIsIngiOiIxMjEuNDY0IiwieSI6IjI1LjAxNDMifQ%3D%3D&weadegreetype=C&cvid=4ce2b3bbdc004d7cd7c168aa62989f6c&zoom=8&alertid=16171781766000&rcmode=1" target="_blank">
-                        🔗 開啟 MSN 全螢幕雷達圖
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <!-- 桃園 CCTV 卡片 (移到天氣上方) -->
-        <div class="card cctv-box">
-            <h3>🎥 桃園市 CCTV</h3>
-            <div class="cctv-box-media-frame">
-                <div class="cctv-iframe-scaler">
-                    <iframe src="https://cctvtraffic.tycg.gov.tw/camera150/?t=1781604845214" title="桃園市 CCTV" scrolling="no"></iframe>
-                </div>
-            </div>
-        </div>
-
-        <!-- 桃園天氣卡片 (移到 CCTV 下方) -->
-        <div class="card weather-card">
-            <div class="weather-content-wrapper">
-                <!-- 左側：文字資訊 -->
-                <div class="weather-left-col">
-                    <h3>📍 桃園即時天氣與雷達</h3>
-                    <span class="station-info" id="tycg-station">尋找最近測站中...</span>
-                    <div class="weather-stats">
-                        <p><strong>氣溫：</strong> <span id="tycg-temp">-- °C</span></p>
-                        <p><strong>濕度：</strong> <span id="tycg-hum">-- %</span></p>
-                        <p><strong>狀態分析：</strong> <span class="warning-badge" id="tycg-warning">載入中...</span></p>
-                    </div>
-                </div>
-                
-                <!-- 右側：雷達圖與按鈕 -->
-                <div class="weather-right-col">
-                    <div class="radar-container">
-                        <iframe src="https://embed.windy.com/embed2.html?lat=25.010377&lon=121.213633&zoom=11&level=surface&overlay=radar&product=radar&menu=&message=&marker=true&calendar=now&pressure=&type=map&location=coordinates&detail=&metricWind=km%2Fh&metricTemp=%C2%B0C&radarRange=-1"></iframe>
-                    </div>
-                    <a class="msn-btn" href="https://www.msn.com/zh-tw/weather/maps/radar/in-%E6%A1%83%E5%9C%92%E5%B8%82?weadegreetype=C" target="_blank">
-                        🔗 開啟 MSN 全螢幕雷達圖
-                    </a>
-                </div>
-            </div>
-        </div>
-
-    </div>
-
-    <script>
-        // 等待 DOM 載入完成後再執行
-        document.addEventListener('DOMContentLoaded', () => {
-            initVideoPlayer();
-            fetchWeatherData();
-        });
-
-        /* =========================================
-           1. 影像播放邏輯
-           ========================================= */
-        function initVideoPlayer() {
-            const video = document.getElementById('video1');
-            const videoSrc = 'https://cctvatis1.ntpc.gov.tw/hls/C000020/live.m3u8';
-            
-            if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = videoSrc;
-                video.addEventListener('loadedmetadata', () => video.play());
-            } else if (Hls.isSupported()) {
-                const hls = new Hls();
-                hls.loadSource(videoSrc);
-                hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
-            }
-        }
-
-        /* =========================================
-           2. 氣象署 API 資料邏輯
-           ========================================= */
-        
-        // Base64 混淆 API Key
-        const _0x1a2b = 'Q1dBLTE0NjUwRUYwLTAxOUMtNERDRi1BQjUxLUE5MDM5NkY5NkY0NA==';
-        const CWA_API_KEY = atob(_0x1a2b); 
-
-        const AZURE_ENDPOINT = 'https://atlas.microsoft.com';
-        const AZURE_API_KEY = ''; // ⚠️ Azure Maps Subscription Key
-
-        const TARGETS = [
-            { id: 'ntpc', name: '新北市', lat: 25.015484, lon: 121.473356 },
-            { id: 'tycg', name: '桃園市', lat: 25.010377, lon: 121.213633 }
-        ];
-
-        function getDistance(lat1, lon1, lat2, lon2) {
-            const R = 6371; 
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                      Math.sin(dLon/2) * Math.sin(dLon/2);
-            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
-        }
-
-        function findClosestStation(targetLat, targetLon, stations) {
-            let closest = null;
-            let minDist = Infinity;
-            for (const station of stations) {
-                const coords = station.GeoInfo.Coordinates.find(c => c.CoordinateName === 'WGS84') || station.GeoInfo.Coordinates[1];
-                if (!coords) continue;
-                const distance = getDistance(targetLat, targetLon, coords.StationLatitude, coords.StationLongitude);
-                if (distance < minDist) {
-                    minDist = distance;
-                    closest = station;
-                }
-            }
-            return { station: closest, distance: minDist };
-        }
-
-        function parseWarning(locationName, warningsList) {
-            const locWarning = warningsList.find(l => l.locationName === locationName);
-            if (locWarning?.hazardConditions?.hazards) {
-                const hazards = locWarning.hazardConditions.hazards.map(h => h.info.phenomena);
-                if (hazards.length > 0) {
-                    const hasThunder = hazards.some(h => h.includes('雷'));
-                    return {
-                        message: `⚠️ ${hazards.join('、')}`,
-                        cssClass: hasThunder ? 'badge-danger' : 'badge-alert'
-                    };
-                }
-            }
-            return { message: '✅ 天氣穩定無特報', cssClass: 'badge-safe' };
-        }
-
-        async function fetchAzureAlerts(lat, lon) {
-            if (!AZURE_API_KEY) return null; 
-
-            try {
-                const url = `${AZURE_ENDPOINT}/weather/severe/alerts/json?api-version=1.1&query=${lat},${lon}&language=zh-TW&details=true&subscription-key=${AZURE_API_KEY}`;
-                const response = await fetch(url);
-                const data = await response.json();
-
-                if (data.results && data.results.length > 0) {
-                    const alertMsg = data.results[0].description.localized || '未知特報';
-                    const isDanger = alertMsg.includes('雷') || alertMsg.includes('豪雨');
-                    return {
-                        message: `⚠️ (MSN) ${alertMsg}`,
-                        cssClass: isDanger ? 'badge-danger' : 'badge-alert'
-                    };
-                }
-                return { message: '✅ (MSN) 天氣穩定無特報', cssClass: 'badge-safe' };
-            } catch (error) {
-                console.error("Azure Maps API 抓取失敗:", error);
-                return null;
-            }
-        }
-
-        async function fetchWeatherData() {
-            try {
-                const weatherUrl = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/O-A0001-001?Authorization=${CWA_API_KEY}&format=JSON`;
-                const warningUrl = `https://opendata.cwa.gov.tw/api/v1/rest/datastore/W-C0033-001?Authorization=${CWA_API_KEY}&format=JSON`;
-                
-                const [weatherRes, warningRes] = await Promise.all([ fetch(weatherUrl), fetch(warningUrl) ]);
-                const weatherData = await weatherRes.json();
-                const warningData = await warningRes.json();
-                
-                const allStations = weatherData.records.Station;
-                const allWarnings = warningData.records?.location || []; 
-
-                TARGETS.forEach(async target => {
-                    const { station, distance } = findClosestStation(target.lat, target.lon, allStations);
-                    
-                    let warningInfo = null;
-                    warningInfo = await fetchAzureAlerts(target.lat, target.lon);
-                    
-                    if (!warningInfo) {
-                        warningInfo = parseWarning(target.name, allWarnings);
-                    }
-
-                    if (station) updateWeatherUI(target.id, station, distance, warningInfo);
-                });
-
-            } catch (error) {
-                console.error("抓取氣象資料失敗:", error);
-                TARGETS.forEach(target => {
-                    document.getElementById(`${target.id}-station`).innerText = "❌ 資料載入失敗";
-                    const warningBadge = document.getElementById(`${target.id}-warning`);
-                    warningBadge.innerText = "連線異常";
-                    warningBadge.className = "warning-badge badge-danger";
-                });
-            }
-        }
-
-        function updateWeatherUI(prefix, station, distance, warningInfo) {
-            let temp = station.WeatherElement.AirTemperature;
-            let hum = station.WeatherElement.RelativeHumidity;
-
-            temp = (temp === -99 || temp === -999) ? "--" : temp;
-            hum = (hum === -99 || hum === -999) ? "--" : hum;
-
-            document.getElementById(`${prefix}-station`).innerText = `(測站：${station.StationName}，距離約 ${distance.toFixed(1)} km)`;
-            document.getElementById(`${prefix}-temp`).innerText = `${temp} °C`;
-            document.getElementById(`${prefix}-hum`).innerText = `${hum} %`;
-            
-            const badgeElement = document.getElementById(`${prefix}-warning`);
-            badgeElement.innerText = warningInfo.message;
-            badgeElement.className = `warning-badge ${warningInfo.cssClass}`;
-        }
-    </script>
-</body>
-</html>
+    if (currentSource === "primary") {
+        status.innerText = "目前來源：主來源 (camera150)";
+    } else {
+        status.innerText = "目前來源：備用來源 (camera278)";
+    }
+}
