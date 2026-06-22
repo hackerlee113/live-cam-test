@@ -275,7 +275,7 @@
                 <h3>🎥 新北市 CCTV</h3>
                 <!-- 新增來源切換按鈕 (ntpc-btn) -->
                 <div class="source-switch">
-                    <button class="switch-btn ntpc-btn active" onclick="switchNtpcCCTV(1)">視角 1</button>
+                    <button class="switch-btn ntpc-btn" onclick="switchNtpcCCTV(1)">視角 1</button>
                     <button class="switch-btn ntpc-btn" onclick="switchNtpcCCTV(2)">視角 2</button>
                 </div>
             </div>
@@ -316,13 +316,13 @@
                 <h3>🎥 桃園市 CCTV</h3>
                 <!-- 新增來源切換按鈕 (tycg-btn) -->
                 <div class="source-switch">
-                    <button class="switch-btn tycg-btn active" onclick="switchTaoyuanCCTV(1)">視角 1</button>
+                    <button class="switch-btn tycg-btn" onclick="switchTaoyuanCCTV(1)">視角 1</button>
                     <button class="switch-btn tycg-btn" onclick="switchTaoyuanCCTV(2)">視角 2</button>
                 </div>
             </div>
             <div class="cctv-box-media-frame">
                 <div class="cctv-iframe-scaler">
-                    <iframe id="tycg-cctv-iframe" src="https://cctvtraffic.tycg.gov.tw/camera150/?t=1781604845214" title="桃園市 CCTV" scrolling="no"></iframe>
+                    <iframe id="tycg-cctv-iframe" src="" title="桃園市 CCTV" scrolling="no"></iframe>
                 </div>
             </div>
         </div>
@@ -358,7 +358,13 @@
     <script>
         // 等待 DOM 載入完成後再執行
         document.addEventListener('DOMContentLoaded', () => {
-            switchNtpcCCTV(1); // 預設載入新北視角 1
+            // 每次載入時，隨機挑選 1 或 2 視角
+            const randomNtpcView = Math.floor(Math.random() * 2) + 1;
+            const randomTycgView = Math.floor(Math.random() * 2) + 1;
+
+            switchNtpcCCTV(randomNtpcView);
+            switchTaoyuanCCTV(randomTycgView);
+            
             fetchWeatherData();
         });
 
