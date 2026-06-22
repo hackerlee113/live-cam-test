@@ -273,6 +273,11 @@
         <div class="card cctv-box">
             <div class="cctv-header">
                 <h3>🎥 新北市 CCTV</h3>
+                <!-- 新增來源切換按鈕 (ntpc-btn) -->
+                <div class="source-switch">
+                    <button class="switch-btn ntpc-btn active" onclick="switchNtpcCCTV(1)">視角 1</button>
+                    <button class="switch-btn ntpc-btn" onclick="switchNtpcCCTV(2)">視角 2</button>
+                </div>
             </div>
             <div class="cctv-box-media-frame">
                 <video id="video1" controls autoplay muted playsinline></video>
@@ -309,10 +314,10 @@
         <div class="card cctv-box">
             <div class="cctv-header">
                 <h3>🎥 桃園市 CCTV</h3>
-                <!-- 新增來源切換按鈕 -->
+                <!-- 新增來源切換按鈕 (tycg-btn) -->
                 <div class="source-switch">
-                    <button class="switch-btn active" onclick="switchTaoyuanCCTV(1)">視角 1</button>
-                    <button class="switch-btn" onclick="switchTaoyuanCCTV(2)">視角 2</button>
+                    <button class="switch-btn tycg-btn active" onclick="switchTaoyuanCCTV(1)">視角 1</button>
+                    <button class="switch-btn tycg-btn" onclick="switchTaoyuanCCTV(2)">視角 2</button>
                 </div>
             </div>
             <div class="cctv-box-media-frame">
@@ -353,43 +358,77 @@
     <script>
         // 等待 DOM 載入完成後再執行
         document.addEventListener('DOMContentLoaded', () => {
-            initVideoPlayer();
+            switchNtpcCCTV(1); // 預設載入新北視角 1
             fetchWeatherData();
         });
 
         /* =========================================
            1. 影像播放與切換邏輯
            ========================================= */
-        function initVideoPlayer() {
-            const video = document.getElementById('video1');
-            const videoSrc = 'https://cctvatis1.ntpc.gov.tw/hls/C000020/live.m3u8';
-            
+
+        // 管理 HLS 實例以防止重複載入造成資源浪費
+        const hlsInstances = {};
+
+        function loadHlsVideo(videoElementId, sourceUrl) {
+            const video = document.getElementById(videoElementId);
+            if (!video) return;
+
+            // 若已有建立過 HLS 物件，先銷毀它，防止背景重複下載串流
+            if (hlsInstances[videoElementId]) {
+                hlsInstances[videoElementId].destroy();
+                delete hlsInstances[videoElementId];
+            }
+
             if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = videoSrc;
-                video.addEventListener('loadedmetadata', () => video.play());
+                // Safari 原生支援
+                video.src = sourceUrl;
+                video.play();
             } else if (Hls.isSupported()) {
+                // 其他瀏覽器使用 hls.js
                 const hls = new Hls();
-                hls.loadSource(videoSrc);
+                hlsInstances[videoElementId] = hls;
+                hls.loadSource(sourceUrl);
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
             }
         }
 
-        // 桃園 CCTV 來源列表
-        const taoyuanCCTVSources = {
-            1: "https://cctvtraffic.tycg.gov.tw/camera150/?t=1781604845214", // 預設來源
-            2: "https://cctvtraffic.tycg.gov.tw/camera278/?t=0.32317171707059" // 新增的備用來源
+        // --- 新北 CCTV 切換邏輯 ---
+        const ntpcCCTVSources = {
+            1: "https://cctvatis1.ntpc.gov.tw/hls/C000020/live.m3u8", // 預設視角
+            2: "https://cctvatis1.ntpc.gov.tw/hls/C000012/live.m3u8"  // 新增的備用來源
         };
 
-        // 切換桃園 CCTV 來源的函式
+        function switchNtpcCCTV(sourceId) {
+            if (ntpcCCTVSources[sourceId]) {
+                loadHlsVideo('video1', ntpcCCTVSources[sourceId]);
+            }
+
+            // 更新按鈕樣式狀態 (啟用中反藍)
+            const buttons = document.querySelectorAll('.ntpc-btn');
+            buttons.forEach((btn, index) => {
+                if (index + 1 === sourceId) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+        }
+
+        // --- 桃園 CCTV 切換邏輯 ---
+        const taoyuanCCTVSources = {
+            1: "https://cctvtraffic.tycg.gov.tw/camera150/?t=1781604845214", // 預設來源
+            2: "https://cctvtraffic.tycg.gov.tw/camera278/?t=0.32317171707059" // 備用來源
+        };
+
         function switchTaoyuanCCTV(sourceId) {
             const iframe = document.getElementById('tycg-cctv-iframe');
             if (iframe && taoyuanCCTVSources[sourceId]) {
                 iframe.src = taoyuanCCTVSources[sourceId];
             }
 
-            // 更新按鈕樣式狀態 (啟用中反藍)
-            const buttons = document.querySelectorAll('.source-switch .switch-btn');
+            // 更新按鈕樣式狀態 (啟用中反藍)，僅針對 tycg-btn
+            const buttons = document.querySelectorAll('.tycg-btn');
             buttons.forEach((btn, index) => {
                 if (index + 1 === sourceId) {
                     btn.classList.add('active');
