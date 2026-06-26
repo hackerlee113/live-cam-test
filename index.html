@@ -42,12 +42,29 @@
         
         <!-- 標題區塊 -->
         <header class="text-center mb-10 relative">
-            <!-- 雲端同步狀態標籤 -->
-            <div id="syncStatus" class="absolute top-0 right-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 text-slate-600 rounded-full text-xs font-medium transition-colors">
-                <i class="ph ph-spinner animate-spin"></i> 連線中...
+            <!-- 頂部控制列 (包含狀態與登入) -->
+            <div class="absolute top-0 right-0 flex flex-col md:flex-row items-end md:items-center gap-2 md:gap-3">
+                <!-- 雲端同步狀態標籤 -->
+                <div id="syncStatus" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 text-slate-600 rounded-full text-xs font-medium transition-colors">
+                    <i class="ph ph-spinner animate-spin"></i> 連線中...
+                </div>
+                
+                <!-- Google 登入按鈕 -->
+                <button id="googleLoginBtn" onclick="window.loginWithGoogle()" class="hidden items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-full text-xs font-medium hover:bg-slate-50 transition-colors shadow-sm">
+                    <i class="ph-fill ph-google-logo text-blue-500 text-sm"></i> Google 登入
+                </button>
+
+                <!-- 使用者資訊 (登入後顯示) -->
+                <div id="userInfo" class="hidden items-center gap-2 bg-white border border-slate-200 px-2 py-1 rounded-full shadow-sm">
+                    <img id="userAvatar" src="" alt="Avatar" class="w-5 h-5 rounded-full bg-slate-200">
+                    <span id="userName" class="text-xs font-medium text-slate-700 max-w-[80px] truncate"></span>
+                    <button onclick="window.logout()" class="text-slate-400 hover:text-red-500 transition-colors ml-1" title="登出">
+                        <i class="ph ph-sign-out text-base"></i>
+                    </button>
+                </div>
             </div>
 
-            <div class="inline-flex items-center justify-center p-3 bg-blue-100 rounded-full mb-4 mt-6 md:mt-0">
+            <div class="inline-flex items-center justify-center p-3 bg-blue-100 rounded-full mb-4 mt-16 md:mt-0">
                 <i class="ph ph-chart-line-up text-3xl text-blue-600"></i>
             </div>
             <h1 class="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">股票到價通知小幫手</h1>
@@ -131,21 +148,19 @@
     <!-- Firebase 與 核心邏輯 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // 初始化 Firebase
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-
         // 狀態管理
+        let isLocalMode = false;
         let currentUser = null;
         let unsubscribeSnapshot = null;
         let watchList = [];       // 從雲端抓取的資料 (包含 symbol, targetPrice)
         let localStockData = {};  // 本地揮發性資料 (模擬的 currentPrice, previousPrice, 通知狀態)
+
+        // Firebase 變數
+        let app, auth, db;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         // 顯示通知訊息 (自訂 Toast)
         window.showNotification = function(title, message, type = 'success') {
@@ -193,49 +208,164 @@
             }, 5000);
         };
 
-        // 驗證登入
-        const initAuth = async () => {
-            try {
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    await signInWithCustomToken(auth, __initial_auth_token);
-                } else {
-                    await signInAnonymously(auth);
+        // 切換至單機模式的函數 (當 Firebase 無法初始化時使用)
+        function switchToLocalMode() {
+            isLocalMode = true;
+            const statusEl = document.getElementById('syncStatus');
+            const addBtn = document.getElementById('addBtn');
+            const googleLoginBtn = document.getElementById('googleLoginBtn');
+            const userInfo = document.getElementById('userInfo');
+            
+            statusEl.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 text-slate-700 rounded-full text-xs font-medium';
+            statusEl.innerHTML = `<i class="ph-fill ph-hard-drive"></i> 單機模式 (未同步)`;
+            addBtn.disabled = false;
+            
+            // 單機模式下隱藏 Google 登入相關 UI
+            if (googleLoginBtn) googleLoginBtn.classList.add('hidden');
+            if (userInfo) userInfo.classList.add('hidden');
+            
+            if (unsubscribeSnapshot) {
+                unsubscribeSnapshot();
+            }
+            
+            renderTable(); // 清除載入中狀態
+        }
+
+        // 嘗試初始化 Firebase
+        try {
+            let firebaseConfig = {};
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                firebaseConfig = JSON.parse(__firebase_config);
+            } else {
+                // ⚠️重要：若您將檔案下載到自己的電腦執行，並希望使用 Google 登入與雲端儲存，
+                // 請到 Firebase 後台建立專案，並將您的 Config 貼在下方解開註解：
+                /*
+                firebaseConfig = {
+                    apiKey: "YOUR_API_KEY",
+                    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+                    projectId: "YOUR_PROJECT_ID",
+                    storageBucket: "YOUR_PROJECT_ID.appspot.com",
+                    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+                    appId: "YOUR_APP_ID"
+                };
+                */
+            }
+            
+            if (Object.keys(firebaseConfig).length === 0) {
+                throw new Error("Empty Firebase config");
+            }
+            
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            
+            // 執行登入流程
+            initAuth();
+            
+        } catch (error) {
+            console.warn("無法初始化雲端環境，已切換至單機測試模式:", error);
+            switchToLocalMode();
+        }
+
+        function initAuth() {
+            const performAuth = async () => {
+                try {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        // 預設先使用匿名登入，讓使用者可先體驗，後續可點擊 Google 登入綁定
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Authentication failed:", error);
+                    window.showNotification("連線錯誤", "無法連線至雲端系統，已切換為單機模式。", "error");
+                    switchToLocalMode();
                 }
+            };
+            
+            performAuth();
+
+            // 監聽登入狀態
+            onAuthStateChanged(auth, (user) => {
+                if (isLocalMode) return;
+                
+                currentUser = user;
+                const statusEl = document.getElementById('syncStatus');
+                const addBtn = document.getElementById('addBtn');
+                const googleLoginBtn = document.getElementById('googleLoginBtn');
+                const userInfo = document.getElementById('userInfo');
+                const userAvatar = document.getElementById('userAvatar');
+                const userName = document.getElementById('userName');
+
+                if (user) {
+                    // UI 更新為已連線
+                    statusEl.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium';
+                    statusEl.innerHTML = `<i class="ph-fill ph-cloud-check"></i> 已連線`;
+                    addBtn.disabled = false;
+                    
+                    // 判斷是否為 Google 登入 (非匿名)
+                    if (!user.isAnonymous) {
+                        googleLoginBtn.classList.add('hidden');
+                        googleLoginBtn.classList.remove('flex');
+                        userInfo.classList.remove('hidden');
+                        userInfo.classList.add('flex');
+                        userAvatar.src = user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName || 'U');
+                        userName.textContent = user.displayName || '使用者';
+                    } else {
+                        // 匿名模式，顯示 Google 登入按鈕
+                        googleLoginBtn.classList.remove('hidden');
+                        googleLoginBtn.classList.add('flex');
+                        userInfo.classList.add('hidden');
+                        userInfo.classList.remove('flex');
+                    }
+                    
+                    // 重新啟動資料庫監聽 (不同帳號/匿名會有不同的 uid)
+                    if (unsubscribeSnapshot) unsubscribeSnapshot();
+                    setupFirestoreListener(user.uid);
+                } else {
+                    switchToLocalMode();
+                }
+            });
+        }
+
+        // Google 登入功能
+        window.loginWithGoogle = async function() {
+            if (!auth) return;
+            const provider = new GoogleAuthProvider();
+            try {
+                const result = await signInWithPopup(auth, provider);
+                window.showNotification("登入成功", `歡迎回來，${result.user.displayName}！`, "success");
             } catch (error) {
-                console.error("Authentication failed:", error);
-                window.showNotification("系統錯誤", "無法連線至帳號系統，請重新整理頁面。", "error");
+                console.error("Google 登入失敗:", error);
+                if (error.code !== 'auth/popup-closed-by-user') {
+                    window.showNotification("登入失敗", error.message, "error");
+                }
             }
         };
 
-        // 監聽登入狀態
-        onAuthStateChanged(auth, (user) => {
-            currentUser = user;
-            const statusEl = document.getElementById('syncStatus');
-            const addBtn = document.getElementById('addBtn');
-
-            if (user) {
-                // UI 更新為已連線
-                statusEl.className = 'absolute top-0 right-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium';
-                statusEl.innerHTML = `<i class="ph-fill ph-cloud-check"></i> 已啟用雲端同步`;
-                addBtn.disabled = false;
-                
-                // 啟動資料庫監聽
-                setupFirestoreListener(user.uid);
-            } else {
-                statusEl.className = 'absolute top-0 right-0 inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-700 rounded-full text-xs font-medium';
-                statusEl.innerHTML = `<i class="ph-fill ph-cloud-slash"></i> 離線模式`;
-                addBtn.disabled = true;
-                
-                if (unsubscribeSnapshot) unsubscribeSnapshot();
+        // 登出功能
+        window.logout = async function() {
+            if (!auth) return;
+            try {
+                if (unsubscribeSnapshot) {
+                    unsubscribeSnapshot();
+                    unsubscribeSnapshot = null;
+                }
                 watchList = [];
-                renderTable();
+                renderTable(); // 清空畫面
+                await signOut(auth);
+                window.showNotification("已登出", "您已成功登出", "info");
+                // 登出後退回匿名登入模式
+                await signInAnonymously(auth);
+            } catch (error) {
+                console.error("登出失敗:", error);
+                window.showNotification("登出失敗", "請稍後再試", "error");
             }
-        });
-
-        initAuth();
+        };
 
         // 建立雲端資料庫監聽
         function setupFirestoreListener(userId) {
+            if (isLocalMode) return;
             const watchListRef = collection(db, 'artifacts', appId, 'users', userId, 'watchlist');
             
             unsubscribeSnapshot = onSnapshot(watchListRef, (snapshot) => {
@@ -244,7 +374,6 @@
                     const data = docSnap.data();
                     watchList.push(data);
                     
-                    // 若這檔股票是剛從雲端載入且沒有本地模擬價格，則初始化一組模擬資料
                     if (!localStockData[data.symbol]) {
                         const mockInitialPrice = +(data.targetPrice * (0.9 + Math.random() * 0.2)).toFixed(2);
                         localStockData[data.symbol] = {
@@ -261,13 +390,8 @@
             });
         }
 
-        // 1. 新增股票到雲端清單
+        // 1. 新增股票
         window.addStock = async function() {
-            if (!currentUser) {
-                window.showNotification("錯誤", "系統連線中，請稍候再試。", "error");
-                return;
-            }
-
             const symbolInput = document.getElementById('stockSymbol');
             const targetInput = document.getElementById('targetPrice');
             
@@ -280,11 +404,35 @@
             }
 
             if (watchList.some(stock => stock.symbol === symbol)) {
-                window.showNotification("重複加入", "這檔股票已經在您的雲端追蹤清單中了！", "info");
+                window.showNotification("重複加入", "這檔股票已經在您的追蹤清單中了！", "info");
                 return;
             }
 
-            // 寫入 Firestore
+            if (isLocalMode) {
+                // 單機模式處理：存入記憶體
+                watchList.push({
+                    symbol: symbol,
+                    targetPrice: targetPrice,
+                    addedAt: new Date().toISOString()
+                });
+                
+                const mockInitialPrice = +(targetPrice * (0.9 + Math.random() * 0.2)).toFixed(2);
+                localStockData[symbol] = {
+                    currentPrice: mockInitialPrice,
+                    previousPrice: mockInitialPrice,
+                    notified: false
+                };
+                
+                renderTable();
+                symbolInput.value = '';
+                targetInput.value = '';
+                symbolInput.focus();
+                return;
+            }
+
+            // 雲端模式處理：寫入 Firestore
+            if (!currentUser) return;
+            
             const stockData = {
                 symbol: symbol,
                 targetPrice: targetPrice,
@@ -292,12 +440,10 @@
             };
 
             try {
-                // 鎖定按鈕避免重複提交
                 document.getElementById('addBtn').disabled = true;
                 const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'watchlist', symbol);
                 await setDoc(docRef, stockData);
                 
-                // 清空輸入並保持焦點
                 symbolInput.value = '';
                 targetInput.value = '';
                 symbolInput.focus();
@@ -311,11 +457,19 @@
 
         // 2. 刪除股票
         window.removeStock = async function(symbol) {
+            if (isLocalMode) {
+                // 單機模式處理：刪除記憶體資料
+                watchList = watchList.filter(s => s.symbol !== symbol);
+                delete localStockData[symbol];
+                renderTable();
+                return;
+            }
+
+            // 雲端模式處理
             if (!currentUser) return;
             try {
                 const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'watchlist', symbol);
                 await deleteDoc(docRef);
-                // 刪除本地模擬狀態
                 delete localStockData[symbol];
             } catch (error) {
                 console.error("Error removing document: ", error);
@@ -329,12 +483,15 @@
             
             // 處理空狀態
             if (watchList.length === 0) {
+                const msg = isLocalMode ? "清單目前是空的，請在上方新增！" : "雲端清單目前是空的，請在上方新增！";
+                const icon = isLocalMode ? "ph-list-magnifying-glass" : "ph-cloud-arrow-up";
+                
                 tbody.innerHTML = `
                     <tr id="emptyState" class="block md:table-row bg-white md:bg-transparent rounded-xl border border-slate-200 md:border-none shadow-sm md:shadow-none">
                         <td colspan="5" class="block md:table-cell px-6 py-12 text-center text-slate-400">
                             <div class="flex flex-col items-center gap-2">
-                                <i class="ph ph-cloud-arrow-up text-4xl text-slate-300"></i>
-                                <p>雲端清單目前是空的，請在上方新增！</p>
+                                <i class="ph ${icon} text-4xl text-slate-300"></i>
+                                <p>${msg}</p>
                             </div>
                         </td>
                     </tr>
@@ -344,13 +501,12 @@
 
             tbody.innerHTML = '';
 
-            // 將雲端資料 (watchList) 結合 本地模擬資料 (localStockData) 進行渲染
-            watchList.forEach(stockCloud => {
-                const symbol = stockCloud.symbol;
-                const targetPrice = stockCloud.targetPrice;
+            // 將資料結合 本地模擬資料 進行渲染
+            watchList.forEach(stockData => {
+                const symbol = stockData.symbol;
+                const targetPrice = stockData.targetPrice;
                 const localData = localStockData[symbol];
 
-                // 防呆：萬一本地資料還沒準備好就略過
                 if (!localData) return;
 
                 const tr = document.createElement('tr');
@@ -359,7 +515,7 @@
                 
                 const isReached = localData.currentPrice >= targetPrice;
                 
-                // 判斷漲跌顏色 (台股：紅漲綠跌)
+                // 判斷漲跌顏色
                 let priceColorClass = 'text-slate-600';
                 let arrowIcon = '';
                 if (localData.currentPrice > localData.previousPrice) {
@@ -422,14 +578,14 @@
 
             let needsRender = false;
 
-            watchList.forEach(stockCloud => {
-                const symbol = stockCloud.symbol;
-                const targetPrice = stockCloud.targetPrice;
+            watchList.forEach(stockData => {
+                const symbol = stockData.symbol;
+                const targetPrice = stockData.targetPrice;
                 const localData = localStockData[symbol];
                 
                 if (!localData) return;
 
-                // 模擬股價波動 (只有 30% 機率變動)
+                // 模擬股價波動
                 if (Math.random() > 0.7) {
                     localData.previousPrice = localData.currentPrice;
                     const changePercent = 1 + ((Math.random() - 0.5) * 0.03);
