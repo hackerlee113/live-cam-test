@@ -1,628 +1,1670 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>股票到價通知小幫手</title>
-    <!-- 引入 Tailwind CSS 進行美化 -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- 引入 Phosphor Icons 圖示 -->
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-    <style>
-        /* 針對通知彈窗的簡單動畫 */
-        @keyframes slideInRight {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Busan 2026 · 釜山冬日散步隨身手帳</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Google Fonts: Gaegu, Shantell Sans, Noto Sans TC, Quicksand -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@400;700&family=Noto+Sans+TC:wght@400;500;700;900&family=Quicksand:wght@500;600;700&family=Shantell+Sans:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            milktea: {
+              50: '#FAF6F0',
+              100: '#F5ECE1',
+              200: '#EBDCCE',
+              300: '#DDC5AF',
+              400: '#C8A98B',
+              500: '#B08B68',
+              600: '#8C6847',
+              700: '#684B31',
+              800: '#463220',
+            },
+            ocean: {
+              50: '#F0F7FA',
+              100: '#E0EFF5',
+              200: '#BEE0ED',
+              300: '#81C3D7',
+              400: '#52A6C4',
+              500: '#3A7CA5',
+              600: '#2F6690',
+              700: '#234F70',
+              800: '#16425B',
+              900: '#0F2C3D',
+            }
+          },
+          fontFamily: {
+            hand: ['Gaegu', 'Shantell Sans', 'cursive'],
+            cute: ['Shantell Sans', 'Gaegu', 'cursive'],
+            sans: ['Noto Sans TC', 'Quicksand', 'sans-serif'],
+          }
         }
-        .toast-enter {
-            animation: slideInRight 0.3s ease-out forwards;
-        }
-        
-        /* 價格跳動時的短暫高亮動畫 */
-        @keyframes flashGreen {
-            0% { background-color: transparent; }
-            50% { background-color: rgba(34, 197, 94, 0.2); }
-            100% { background-color: transparent; }
-        }
-        @keyframes flashRed {
-            0% { background-color: transparent; }
-            50% { background-color: rgba(239, 68, 68, 0.2); }
-            100% { background-color: transparent; }
-        }
-        .flash-up { animation: flashRed 1s ease-out; } /* 台股紅色上漲 */
-        .flash-down { animation: flashGreen 1s ease-out; } /* 台股綠色下跌 */
-    </style>
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #EFE6DC;
+      background-image: 
+        radial-gradient(#8C6847 0.75px, transparent 0.75px), 
+        radial-gradient(#8C6847 0.75px, #EFE6DC 0.75px);
+      background-size: 30px 30px;
+      background-position: 0 0, 15px 15px;
+      color: #463220;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      padding-bottom: env(safe-area-inset-bottom, 80px);
+    }
+
+    .hand-card {
+      background: #FFFDF9;
+      box-shadow: 
+        0 12px 30px -10px rgba(58, 124, 165, 0.15),
+        0 4px 12px rgba(140, 104, 71, 0.08),
+        inset 0 0 0 1px rgba(221, 197, 175, 0.45);
+      border-radius: 26px;
+    }
+
+    .washi-tape {
+      background: rgba(224, 239, 245, 0.88);
+      backdrop-filter: blur(2px);
+      border-left: 2px dashed rgba(82, 166, 196, 0.55);
+      border-right: 2px dashed rgba(82, 166, 196, 0.55);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.04);
+    }
+
+    .sticker-bounce {
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .sticker-bounce:active {
+      transform: scale(0.94);
+    }
+
+    /* 手風琴折疊動畫 */
+    .day-body {
+      transition: max-height 0.3s ease-out, opacity 0.25s ease;
+    }
+
+    /* 雪花飄浮動畫 */
+    @keyframes floatParticle {
+      0% { transform: translateY(0px) rotate(0deg); opacity: 0.9; }
+      50% { transform: translateY(-8px) rotate(15deg); opacity: 0.5; }
+      100% { transform: translateY(0px) rotate(0deg); opacity: 0.9; }
+    }
+    .floating-star {
+      animation: floatParticle 3.8s ease-in-out infinite;
+    }
+    .floating-star-slow {
+      animation: floatParticle 5.2s ease-in-out infinite reverse;
+    }
+
+    /* 海浪輕晃 */
+    @keyframes waveSway {
+      0%, 100% { transform: translateX(0); }
+      50% { transform: translateX(-6px); }
+    }
+    .swaying-wave {
+      animation: waveSway 6s ease-in-out infinite;
+    }
+
+    /* 隱藏滾動條 */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
 </head>
-<body class="bg-slate-50 text-slate-800 font-sans min-h-screen relative">
 
-    <!-- 用於放置通知的容器 -->
-    <div id="toast-container" class="fixed top-4 left-4 right-4 md:left-auto md:right-5 md:top-5 z-50 flex flex-col gap-3 pointer-events-none"></div>
+<body class="min-h-screen font-sans antialiased text-slate-800">
 
-    <div class="max-w-4xl mx-auto px-4 py-8 md:py-12">
-        
-        <!-- 標題區塊 -->
-        <header class="text-center mb-10 relative">
-            <!-- 頂部控制列 (包含狀態與登入) -->
-            <div class="absolute top-0 right-0 flex flex-col md:flex-row items-end md:items-center gap-2 md:gap-3">
-                <!-- 雲端同步狀態標籤 -->
-                <div id="syncStatus" class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 text-slate-600 rounded-full text-xs font-medium transition-colors">
-                    <i class="ph ph-spinner animate-spin"></i> 連線中...
-                </div>
-                
-                <!-- Google 登入按鈕 -->
-                <button id="googleLoginBtn" onclick="window.loginWithGoogle()" class="hidden items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 rounded-full text-xs font-medium hover:bg-slate-50 transition-colors shadow-sm">
-                    <i class="ph-fill ph-google-logo text-blue-500 text-sm"></i> Google 登入
-                </button>
-
-                <!-- 使用者資訊 (登入後顯示) -->
-                <div id="userInfo" class="hidden items-center gap-2 bg-white border border-slate-200 px-2 py-1 rounded-full shadow-sm">
-                    <img id="userAvatar" src="" alt="Avatar" class="w-5 h-5 rounded-full bg-slate-200">
-                    <span id="userName" class="text-xs font-medium text-slate-700 max-w-[80px] truncate"></span>
-                    <button onclick="window.logout()" class="text-slate-400 hover:text-red-500 transition-colors ml-1" title="登出">
-                        <i class="ph ph-sign-out text-base"></i>
-                    </button>
-                </div>
-            </div>
-
-            <div class="inline-flex items-center justify-center p-3 bg-blue-100 rounded-full mb-4 mt-16 md:mt-0">
-                <i class="ph ph-chart-line-up text-3xl text-blue-600"></i>
-            </div>
-            <h1 class="text-3xl md:text-4xl font-bold text-slate-900 tracking-tight">股票到價通知小幫手</h1>
-            <p class="mt-2 text-slate-500">設定目標價，系統將模擬股價變動並在達標時通知您</p>
-        </header>
-
-        <!-- 主要內容卡片 -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            
-            <!-- 輸入區塊 -->
-            <div class="p-6 md:p-8 border-b border-slate-100 bg-slate-50/50">
-                <div class="flex flex-col md:flex-row gap-4">
-                    <div class="flex-1 relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="ph ph-magnifying-glass text-slate-400 text-lg"></i>
-                        </div>
-                        <input type="text" id="stockSymbol" 
-                            class="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none placeholder:text-slate-400" 
-                            placeholder="輸入股票代號或名稱 (如: 2330 或 台積電)" required>
-                    </div>
-                    
-                    <div class="flex-1 relative">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <i class="ph ph-currency-circle-dollar text-slate-400 text-lg"></i>
-                        </div>
-                        <input type="number" id="targetPrice" step="0.5" 
-                            class="w-full pl-10 pr-4 py-3 bg-white border border-slate-300 rounded-xl text-slate-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-shadow outline-none placeholder:text-slate-400" 
-                            placeholder="設定目標價位" required>
-                    </div>
-                    
-                    <button id="addBtn" onclick="window.addStock()" disabled
-                        class="md:w-auto w-full px-6 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors flex items-center justify-center gap-2 shadow-sm shadow-blue-600/20 active:scale-[0.98]">
-                        <i class="ph ph-plus-circle text-lg"></i>
-                        加入追蹤
-                    </button>
-                </div>
-            </div>
-
-            <!-- 列表區塊 -->
-            <div class="p-4 md:p-0 bg-slate-50/30 md:bg-transparent">
-                <table class="w-full text-left border-collapse block md:table">
-                    <thead class="hidden md:table-header-group">
-                        <tr class="bg-slate-50 text-slate-500 text-sm uppercase tracking-wider border-b border-slate-200">
-                            <th class="px-6 py-4 font-medium">股票代號 / 名稱</th>
-                            <th class="px-6 py-4 font-medium text-right">目標價</th>
-                            <th class="px-6 py-4 font-medium text-right">目前價位</th>
-                            <th class="px-6 py-4 font-medium text-center">狀態</th>
-                            <th class="px-6 py-4 font-medium text-center">操作</th>
-                        </tr>
-                    </thead>
-                    <tbody id="stockList" class="block md:table-row-group flex flex-col gap-4 md:gap-0 md:divide-y divide-slate-100">
-                        <!-- 載入中狀態 -->
-                        <tr id="loadingState" class="block md:table-row bg-white md:bg-transparent rounded-xl border border-slate-200 md:border-none shadow-sm md:shadow-none">
-                            <td colspan="5" class="block md:table-cell px-6 py-12 text-center text-slate-400">
-                                <div class="flex flex-col items-center gap-2">
-                                    <i class="ph ph-spinner animate-spin text-4xl text-blue-400"></i>
-                                    <p>正在同步雲端資料...</p>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+  <!-- 頂部手帳釘選條 (標題與快速倒數) -->
+  <header class="sticky top-0 z-30 bg-[#FFFDF9]/95 backdrop-blur border-b border-milktea-200 shadow-xs">
+    <div class="max-w-[440px] mx-auto px-4 py-2.5 flex items-center justify-between">
+      <div class="flex items-center gap-2">
+        <div class="w-8 h-8 rounded-full bg-ocean-600 text-white flex items-center justify-center font-bold text-sm shadow-sm font-hand">
+          釜
         </div>
-        
-        <!-- 狀態說明 -->
-        <div class="mt-6 flex flex-wrap items-center justify-center gap-4 md:gap-6 text-sm text-slate-500">
-            <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-red-500"></span> 上漲 (台股習慣)
-            </div>
-            <div class="flex items-center gap-2">
-                <span class="w-3 h-3 rounded-full bg-green-500"></span> 下跌
-            </div>
-            <div class="flex items-center gap-2">
-                <i class="ph-fill ph-bell-ringing text-amber-500"></i> 達到目標價
-            </div>
+        <div>
+          <h1 class="text-sm font-bold text-ocean-900 leading-tight">Busan Travel Handbook</h1>
+          <p class="text-[10px] text-milktea-600 font-medium">2026.12.04 — 12.07 · 4天3夜</p>
         </div>
-
+      </div>
+      <!-- 出發倒數標籤 -->
+      <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-milktea-100 border border-milktea-300 text-[11px] font-bold text-milktea-800">
+        <i data-lucide="clock" class="w-3.5 h-3.5 text-ocean-600"></i>
+        <span id="headerCountdown">-- 天</span>
+      </div>
     </div>
+  </header>
 
-    <!-- Firebase 與 核心邏輯 -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+  <!-- APP 主畫面容器 -->
+  <main class="max-w-[440px] mx-auto p-3.5">
 
-        // 狀態管理
-        let isLocalMode = false;
-        let currentUser = null;
-        let unsubscribeSnapshot = null;
-        let watchList = [];       // 從雲端抓取的資料 (包含 symbol, targetPrice)
-        let localStockData = {};  // 本地揮發性資料 (模擬的 currentPrice, previousPrice, 通知狀態)
+    <!-- ==========================================
+         TAB 1: 封面與總覽 (COVER & OVERVIEW)
+         ========================================== -->
+    <section id="tab-cover" class="tab-panel space-y-4">
+      
+      <!-- 手帳封面卡片 -->
+      <div class="hand-card relative p-4 pb-5 overflow-hidden border border-milktea-200">
+        
+        <!-- 頂部膠帶 -->
+        <div class="absolute -top-3 left-1/2 -translate-x-1/2 z-20 w-32 h-6 washi-tape rotate-[-1deg] flex items-center justify-center">
+          <span class="text-[10px] font-hand font-bold text-ocean-800 tracking-wider">BUSAN WINTER TRIP</span>
+        </div>
 
-        // Firebase 變數
-        let app, auth, db;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        <!-- 粒子光芒 -->
+        <div id="particle-layer" class="absolute inset-0 pointer-events-none z-10 overflow-hidden">
+          <span class="floating-star absolute top-10 left-5 text-amber-300 text-base">✦</span>
+          <span class="floating-star-slow absolute top-24 right-6 text-ocean-300 text-sm">✧</span>
+          <span class="floating-star absolute bottom-36 left-6 text-ocean-200 text-xs">❄</span>
+          <span class="floating-star-slow absolute bottom-28 right-5 text-amber-200 text-lg">✦</span>
+        </div>
 
-        // 顯示通知訊息 (自訂 Toast)
-        window.showNotification = function(title, message, type = 'success') {
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            
-            let iconClass, borderClass, textClass;
-            if (type === 'success') {
-                iconClass = 'ph-fill ph-bell-ringing text-amber-500';
-                borderClass = 'border-amber-500';
-                textClass = 'text-amber-500';
-            } else if (type === 'error') {
-                iconClass = 'ph-fill ph-warning-circle text-red-500';
-                borderClass = 'border-red-500';
-                textClass = 'text-red-500';
-            } else {
-                iconClass = 'ph-fill ph-info text-blue-500';
-                borderClass = 'border-blue-500';
-                textClass = 'text-blue-500';
-            }
+        <!-- 頂部控制按鈕 (海浪聲、飄雪) -->
+        <div class="flex items-center justify-between relative z-20 mt-2 mb-2">
+          <span class="px-2.5 py-0.5 rounded-full bg-milktea-100 text-milktea-800 text-[11px] font-medium border border-milktea-200">
+            ❄️ 溫暖手繪紀念封面
+          </span>
+          <div class="flex items-center gap-1.5">
+            <button onclick="toggleWaveSound()" id="waveBtn" title="播放海浪白噪音" class="sticker-bounce w-7 h-7 rounded-full bg-white border border-ocean-200 text-ocean-600 flex items-center justify-center shadow-xs">
+              <i data-lucide="volume-2" id="waveIcon" class="w-3.5 h-3.5"></i>
+            </button>
+            <button onclick="toggleSnow()" title="雪花飄落" class="sticker-bounce w-7 h-7 rounded-full bg-white border border-milktea-300 text-milktea-600 flex items-center justify-center shadow-xs text-xs">
+              ❄️
+            </button>
+          </div>
+        </div>
 
-            toast.className = `toast-enter bg-white border-l-4 ${borderClass} p-4 rounded-xl shadow-xl shadow-slate-200/50 flex items-start gap-3 w-full md:min-w-[300px] md:max-w-sm pointer-events-auto`;
-            
-            toast.innerHTML = `
-                <div class="${textClass} mt-0.5">
-                    <i class="${iconClass} text-xl"></i>
-                </div>
-                <div class="flex-1">
-                    <h4 class="text-sm font-bold text-slate-800">${title}</h4>
-                    <p class="text-sm text-slate-600 mt-1">${message}</p>
-                </div>
-                <button class="text-slate-400 hover:text-slate-600 transition-colors" onclick="this.parentElement.remove()">
-                    <i class="ph ph-x text-lg"></i>
-                </button>
-            `;
+        <!-- 標題 -->
+        <div class="text-center relative z-20 my-1">
+          <h1 class="text-4xl font-black font-cute tracking-tight text-ocean-800 flex items-center justify-center gap-1">
+            Busan
+            <span class="text-xl font-hand text-milktea-500 font-bold ml-1">부산</span>
+          </h1>
+          <p class="text-xs font-hand text-milktea-600 font-bold mt-0.5">海雲台 · 廣安大橋 · 清沙浦燈塔</p>
+        </div>
 
-            container.appendChild(toast);
-            setTimeout(() => {
-                if(toast.parentElement) {
-                    toast.style.opacity = '0';
-                    toast.style.transform = 'translateX(100%)';
-                    toast.style.transition = 'all 0.3s ease-out';
-                    setTimeout(() => toast.remove(), 300);
-                }
-            }, 5000);
-        };
+        <!-- 核心插畫：似顏繪情侶 + 釜山地標 (SVG) -->
+        <div class="relative w-full my-2.5 rounded-2xl overflow-hidden border-2 border-milktea-300/80 bg-gradient-to-b from-[#EBF5F9] via-[#FDF8F3] to-[#F3E7DC] shadow-inner">
+          <svg viewBox="0 0 380 430" class="w-full h-auto block select-none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#CCE5F0" />
+                <stop offset="55%" stop-color="#EFF6FA" />
+                <stop offset="100%" stop-color="#FDF6ED" />
+              </linearGradient>
+              <linearGradient id="seaGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#5B9CBF" />
+                <stop offset="40%" stop-color="#7BB9D4" />
+                <stop offset="100%" stop-color="#CBE5EE" />
+              </linearGradient>
+              <linearGradient id="sandGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#E9D6BE" />
+                <stop offset="60%" stop-color="#DDC3A5" />
+                <stop offset="100%" stop-color="#D2B28F" />
+              </linearGradient>
+              <filter id="blushFilter" x="-20%" y="-20%" width="140%" height="140%">
+                <feGaussianBlur stdDeviation="3" />
+              </filter>
+            </defs>
 
-        // 切換至單機模式的函數 (當 Firebase 無法初始化時使用)
-        function switchToLocalMode() {
-            isLocalMode = true;
-            const statusEl = document.getElementById('syncStatus');
-            const addBtn = document.getElementById('addBtn');
-            const googleLoginBtn = document.getElementById('googleLoginBtn');
-            const userInfo = document.getElementById('userInfo');
-            
-            statusEl.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-slate-200 text-slate-700 rounded-full text-xs font-medium';
-            statusEl.innerHTML = `<i class="ph-fill ph-hard-drive"></i> 單機模式 (未同步)`;
-            addBtn.disabled = false;
-            
-            // 單機模式下隱藏 Google 登入相關 UI
-            if (googleLoginBtn) googleLoginBtn.classList.add('hidden');
-            if (userInfo) userInfo.classList.add('hidden');
-            
-            if (unsubscribeSnapshot) {
-                unsubscribeSnapshot();
-            }
-            
-            renderTable(); // 清除載入中狀態
+            <!-- 1. 天空與冬日暖陽 -->
+            <rect width="380" height="230" fill="url(#skyGrad)" />
+            <circle cx="60" cy="55" r="30" fill="#FFECC7" opacity="0.8" />
+            <circle cx="60" cy="55" r="20" fill="#FFF8EA" />
+
+            <!-- 海鷗飛翔 -->
+            <g stroke="#3A7CA5" stroke-width="1.8" stroke-linecap="round" fill="none" opacity="0.75">
+              <path d="M120 40 Q126 34 132 38 Q138 34 144 40" />
+              <path d="M148 50 Q152 46 157 49 Q162 46 166 50" />
+              <path d="M230 32 Q235 27 241 31 Q247 27 252 32" />
+            </g>
+
+            <!-- 2. 廣安大橋 (Diamond Bridge) 遠景線條剪影 -->
+            <g opacity="0.85">
+              <path d="M0 160 Q80 142 160 152 Q260 140 380 156 L380 175 L0 175 Z" fill="#BCD8E5" opacity="0.7" />
+              <!-- 橋塔 1 -->
+              <path d="M135 110 L140 168 M149 110 L144 168" stroke="#3A7CA5" stroke-width="2.2" stroke-linecap="round" />
+              <line x1="133" y1="122" x2="151" y2="122" stroke="#3A7CA5" stroke-width="2" />
+              <line x1="136" y1="140" x2="148" y2="140" stroke="#3A7CA5" stroke-width="1.8" />
+              <!-- 橋塔 2 -->
+              <path d="M225 110 L230 168 M239 110 L234 168" stroke="#3A7CA5" stroke-width="2.2" stroke-linecap="round" />
+              <line x1="223" y1="122" x2="241" y2="122" stroke="#3A7CA5" stroke-width="2" />
+              <line x1="226" y1="140" x2="238" y2="140" stroke="#3A7CA5" stroke-width="1.8" />
+              <!-- 主索 -->
+              <path d="M60 168 Q142 120 142 110 Q187 142 232 110 Q232 120 310 168" stroke="#2F6690" stroke-width="2.5" fill="none" stroke-linecap="round" />
+              <!-- 橋面 -->
+              <line x1="40" y1="168" x2="330" y2="168" stroke="#2F6690" stroke-width="3" stroke-linecap="round" />
+            </g>
+
+            <!-- 3. 清沙浦紅白經典燈塔 -->
+            <g transform="translate(305, 115)">
+              <path d="M-20 62 Q20 58 55 64 L55 80 L-25 80 Z" fill="#8C6847" opacity="0.75" />
+              <path d="M4 22 L8 60 L24 60 L28 22 Z" fill="#E07A5F" stroke="#463220" stroke-width="1.5" />
+              <rect x="7" y="32" width="18" height="7" fill="#FFFDF9" />
+              <rect x="8" y="46" width="16" height="7" fill="#FFFDF9" />
+              <rect x="2" y="19" width="28" height="4" rx="1.5" fill="#463220" />
+              <path d="M8 19 L8 12 L24 12 L24 19 Z" fill="#FFE8D6" stroke="#463220" stroke-width="1.2" />
+              <circle cx="16" cy="15" r="3" fill="#F4D06F" />
+              <path d="M6 12 Q16 4 26 12 Z" fill="#E07A5F" stroke="#463220" stroke-width="1.5" />
+              <!-- 伴隨小綠燈塔 -->
+              <path d="M-15 36 L-13 60 L-3 60 L-1 36 Z" fill="#FFFFFF" stroke="#463220" stroke-width="1.2" />
+              <path d="M-13 34 Q-8 26 -3 34 Z" fill="#52A6C4" stroke="#463220" stroke-width="1.2" />
+            </g>
+
+            <!-- 4. 海雲台波浪海面 -->
+            <g class="swaying-wave">
+              <path d="M-20 172 Q80 162 190 172 Q290 182 400 172 L400 240 L-20 240 Z" fill="url(#seaGrad)" />
+              <path d="M30 182 Q65 178 100 183 M160 186 Q200 180 240 186 M290 184 Q330 180 365 185" stroke="#FFFFFF" stroke-width="2.5" stroke-linecap="round" opacity="0.8" fill="none" />
+              <path d="M70 198 Q120 192 170 198 M230 200 Q280 194 330 200" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" opacity="0.9" fill="none" />
+            </g>
+
+            <!-- 5. 金黃沙灘與潮線 -->
+            <path d="M-20 226 Q90 216 200 228 Q300 238 400 222 L400 430 L-20 430 Z" fill="url(#sandGrad)" />
+            <path d="M-10 228 C40 220 90 232 140 224 C190 216 250 234 310 226 C350 220 380 225 400 224" stroke="#FFFFFF" stroke-width="4.5" stroke-linecap="round" fill="none" opacity="0.95" />
+
+            <!-- ==================== 6. 核心人物似顏繪 (男左 + 女右 溫馨相依) ==================== -->
+            <g id="couplePortrait" transform="translate(42, 168)">
+              <!-- 男生 -->
+              <g id="boy">
+                <path d="M96 170 L93 235 L108 235 L111 170 Z" fill="#1E293B" />
+                <path d="M113 170 L115 235 L130 235 L126 170 Z" fill="#243044" />
+                <ellipse cx="100" cy="236" rx="9" ry="5" fill="#475569" />
+                <ellipse cx="123" cy="236" rx="9" ry="5" fill="#475569" />
+                <path d="M80 72 C72 90 70 145 74 180 C88 184 136 184 148 180 C152 145 150 90 142 72 Z" fill="#2B536D" stroke="#16425B" stroke-width="2" />
+                <line x1="112" y1="92" x2="112" y2="175" stroke="#16425B" stroke-width="2" stroke-linecap="round" />
+                <path d="M80 80 Q66 110 74 142 Q82 145 88 135 Q82 110 92 88 Z" fill="#24475E" stroke="#16425B" stroke-width="1.8" />
+                <path d="M140 82 Q160 98 178 108 Q182 114 175 118 Q155 106 134 94 Z" fill="#24475E" stroke="#16425B" stroke-width="1.8" />
+                <!-- 圍巾 -->
+                <path d="M90 62 C85 75 135 75 132 62 C130 54 92 54 90 62 Z" fill="#C89666" stroke="#463220" stroke-width="1.8" />
+                <path d="M96 68 L94 116 C94 120 108 120 108 116 L108 68 Z" fill="#B78252" stroke="#463220" stroke-width="1.6" />
+                <!-- 頭臉五官 -->
+                <rect x="104" y="50" width="14" height="12" fill="#FFE3CC" />
+                <ellipse cx="111" cy="42" rx="17" ry="19" fill="#FFE3CC" stroke="#463220" stroke-width="1.8" />
+                <ellipse cx="100" cy="46" rx="4.5" ry="3" fill="#F8A590" opacity="0.65" filter="url(#blushFilter)" />
+                <ellipse cx="122" cy="46" rx="4.5" ry="3" fill="#F8A590" opacity="0.65" filter="url(#blushFilter)" />
+                <path d="M101 39 Q104 36 108 39" stroke="#463220" stroke-width="2" stroke-linecap="round" fill="none" />
+                <path d="M115 39 Q118 36 122 39" stroke="#463220" stroke-width="2" stroke-linecap="round" fill="none" />
+                <path d="M108 47 Q112 51 116 47" stroke="#463220" stroke-width="2" stroke-linecap="round" fill="none" />
+                <path d="M93 38 C90 22 105 16 122 18 C132 20 134 32 131 40 C128 35 125 32 120 31 C115 30 110 33 104 30 C99 32 96 35 93 38 Z" fill="#2C221E" stroke="#1A120E" stroke-width="1.8" />
+              </g>
+
+              <!-- 女生 -->
+              <g id="girl">
+                <path d="M162 170 L158 235 L174 235 L176 170 Z" fill="#8C7A6B" />
+                <path d="M178 170 L180 235 L196 235 L192 170 Z" fill="#7D6B5C" />
+                <ellipse cx="166" cy="236" rx="9" ry="5.5" fill="#B08B68" />
+                <ellipse cx="188" cy="236" rx="9" ry="5.5" fill="#B08B68" />
+                <path d="M152 50 C140 70 142 120 150 136 C158 125 156 80 156 60 Z" fill="#4A3428" />
+                <path d="M188 50 C206 70 206 120 196 138 C188 120 188 80 186 60 Z" fill="#4A3428" />
+                <!-- 奶茶大衣 -->
+                <path d="M152 76 C144 94 140 146 146 182 C160 186 200 186 210 182 C216 146 212 94 204 76 Z" fill="#E8DACB" stroke="#8C6847" stroke-width="2" />
+                <!-- 捧熱咖啡 -->
+                <g transform="translate(164, 102)">
+                  <path d="M6 16 Q14 24 20 14" stroke="#FFE3CC" stroke-width="4.5" stroke-linecap="round" />
+                  <path d="M9 10 L11 28 L23 28 L25 10 Z" fill="#FFFFFF" stroke="#463220" stroke-width="1.5" />
+                  <rect x="10" y="15" width="14" height="8" rx="1.5" fill="#D4B996" />
+                  <rect x="8" y="7" width="18" height="3.5" rx="1.5" fill="#463220" />
+                  <path d="M14 4 Q13 1 15 -2" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.8" />
+                  <path d="M18 5 Q19 2 17 -1" stroke="#FFFFFF" stroke-width="1.5" stroke-linecap="round" fill="none" opacity="0.8" />
+                </g>
+                <!-- 海洋藍圍巾 -->
+                <path d="M156 64 C152 78 196 78 194 64 C192 56 158 56 156 64 Z" fill="#81C3D7" stroke="#2F6690" stroke-width="1.8" />
+                <path d="M180 70 L184 118 C184 122 196 122 196 118 L192 70 Z" fill="#52A6C4" stroke="#2F6690" stroke-width="1.5" />
+                <!-- 頭臉五官 -->
+                <rect x="168" y="52" width="12" height="12" fill="#FFE8D6" />
+                <ellipse cx="174" cy="45" rx="16" ry="17.5" fill="#FFE8D6" stroke="#463220" stroke-width="1.8" />
+                <ellipse cx="165" cy="49" rx="5" ry="3.5" fill="#FF8E7F" opacity="0.75" filter="url(#blushFilter)" />
+                <ellipse cx="184" cy="49" rx="5" ry="3.5" fill="#FF8E7F" opacity="0.75" filter="url(#blushFilter)" />
+                <path d="M165 42 Q168 38 171 42" stroke="#463220" stroke-width="2.2" stroke-linecap="round" fill="none" />
+                <path d="M178 42 Q181 38 184 42" stroke="#463220" stroke-width="2.2" stroke-linecap="round" fill="none" />
+                <path d="M171 50 Q175 55 179 50" stroke="#E0533C" stroke-width="2.2" stroke-linecap="round" fill="none" />
+                <!-- 米白毛帽與絨球 -->
+                <path d="M158 35 C156 16 193 16 191 35 Z" fill="#FDF8F0" stroke="#463220" stroke-width="1.8" />
+                <rect x="156" y="31" width="36" height="8" rx="4" fill="#F4ECE1" stroke="#463220" stroke-width="1.5" />
+                <circle cx="174.5" cy="15" r="7.5" fill="#FDF8F0" stroke="#8C6847" stroke-width="1.5" />
+              </g>
+              <!-- 愛心 -->
+              <path d="M145 28 C145 23 139 21 136 25 C133 21 127 23 127 28 C127 34 136 38 136 38 C136 38 145 34 145 28 Z" fill="#E07A5F" stroke="#FFFFFF" stroke-width="1.5" class="floating-star" />
+            </g>
+          </svg>
+        </div>
+
+        <!-- 快速功能按鈕 -->
+        <div class="grid grid-cols-3 gap-2 mt-3">
+          <button onclick="switchTab('itinerary')" class="sticker-bounce p-2.5 rounded-2xl bg-milktea-100 border border-milktea-200 text-center">
+            <span class="text-base block">🗓️</span>
+            <span class="text-xs font-bold text-milktea-800">4日散步行程</span>
+          </button>
+          <button onclick="switchTab('map')" class="sticker-bounce p-2.5 rounded-2xl bg-ocean-50 border border-ocean-200 text-center">
+            <span class="text-base block">🗺️</span>
+            <span class="text-xs font-bold text-ocean-800">美食地圖導航</span>
+          </button>
+          <button onclick="switchTab('tips')" class="sticker-bounce p-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-center">
+            <span class="text-base block">💡</span>
+            <span class="text-xs font-bold text-amber-800">貼心提醒錦囊</span>
+          </button>
+        </div>
+
+      </div>
+
+      <!-- 快速憑證便籤 (住宿 & 機票) -->
+      <div class="grid grid-cols-2 gap-2.5">
+        <!-- 住宿便籤 -->
+        <div class="hand-card p-3 border border-milktea-200 relative">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-bold text-slate-800 flex items-center gap-1">
+              <i data-lucide="hotel" class="w-3.5 h-3.5 text-milktea-600"></i> Gem Stay
+            </span>
+            <span class="text-[9px] bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded font-bold">已預訂</span>
+          </div>
+          <div class="text-[11px] text-slate-600 space-y-0.5 font-mono">
+            <div>編號: 6587.622.011</div>
+            <div>PIN: 5988</div>
+          </div>
+          <button onclick="copyText('부산진구 중앙대로 752')" class="mt-2 w-full py-1 bg-milktea-100 hover:bg-milktea-200 text-[10px] text-milktea-800 font-bold rounded-lg transition flex items-center justify-center gap-1">
+            <i data-lucide="copy" class="w-3 h-3"></i> 複製韓文地址
+          </button>
+        </div>
+
+        <!-- 航班便籤 -->
+        <div class="hand-card p-3 border border-ocean-200 relative">
+          <div class="flex items-center justify-between mb-1">
+            <span class="text-xs font-bold text-slate-800 flex items-center gap-1">
+              <i data-lucide="plane" class="w-3.5 h-3.5 text-ocean-600"></i> 濟州航空
+            </span>
+            <span class="text-[9px] bg-ocean-50 text-ocean-700 px-1.5 py-0.5 rounded font-bold">QGG32N</span>
+          </div>
+          <div class="text-[11px] text-slate-600 space-y-0.5">
+            <div>去: 12/04 12:15 TPE</div>
+            <div>回: 12/07 22:00 PUS</div>
+          </div>
+          <button onclick="copyText('QGG32N')" class="mt-2 w-full py-1 bg-ocean-50 hover:bg-ocean-100 text-[10px] text-ocean-800 font-bold rounded-lg transition flex items-center justify-center gap-1">
+            <i data-lucide="copy" class="w-3 h-3"></i> 複製訂位代碼
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==========================================
+         TAB 2: 每日行程 (ITINERARY)
+         ========================================== -->
+    <section id="tab-itinerary" class="tab-panel hidden space-y-3">
+      
+      <!-- Day 1 -->
+      <div class="hand-card border border-milktea-200 overflow-hidden">
+        <div onclick="toggleDay('day1')" class="p-3.5 bg-gradient-to-r from-milktea-100 to-white flex items-center justify-between cursor-pointer">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-xl bg-milktea-600 text-white flex items-center justify-center text-xs font-bold font-hand">D1</span>
+            <div>
+              <div class="text-xs font-bold text-slate-900">12/04 (五) 抵達西面與人氣烤肉</div>
+              <div class="text-[10px] text-milktea-600">機場 ➔ 西面住宿 ➔ 味贊王烤肉 ➔ 地下街</div>
+            </div>
+          </div>
+          <i data-lucide="chevron-down" id="arrow-day1" class="w-4 h-4 text-slate-400 transition-transform"></i>
+        </div>
+        <div id="content-day1" class="day-body p-3.5 border-t border-milktea-100 space-y-3 text-xs">
+          <!-- Item 1: 金海機場 -->
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
+            <div class="flex justify-between items-center font-bold text-slate-800">
+              <span>✈️ 15:45 – 17:00 抵達金海機場</span>
+              <span class="text-[10px] text-ocean-600 font-normal">入境手續</span>
+            </div>
+            <p class="text-slate-600 text-[11px]">7C6152 準點抵達，辦理入境與領取託運行李。</p>
+            <div class="p-1.5 bg-sky-50/70 rounded-lg text-[10px] text-sky-800 flex items-center gap-1 border border-sky-100">
+              <span>🌤️ 天氣狀況：約 8°C~10°C 戶外迎風微涼，航廈與電車室內有暖氣。</span>
+            </div>
+            <div class="p-1.5 bg-white rounded-lg text-[10px] text-slate-500 border border-slate-100">
+              💡 <strong>交通提示</strong>：搭輕軌至【沙上站】轉2號線至【西面站】，再轉1號線1站到【釜田站】7號出口，有電梯直達地面。
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?cid=12002511425686008630" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="openNaver('김해국제공항')" class="px-2 py-1 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                Naver搜尋
+              </button>
+            </div>
+          </div>
+
+          <!-- Item 2: Gem Stay -->
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
+            <div class="flex justify-between items-center font-bold text-slate-800">
+              <span>🏠 17:00 – 17:50 Gem Stay Seomyeon</span>
+              <span class="text-[10px] text-milktea-700 bg-milktea-100 px-1.5 py-0.5 rounded font-bold">釜田站7號</span>
+            </div>
+            <p class="text-slate-600 text-[11px]">出釜田站 7 號出口即達公寓（#204），放下大件行李與稍作洗漱喝水。</p>
+            <div class="p-1.5 bg-amber-50 rounded-lg text-[10px] text-amber-800 flex items-center gap-1 border border-amber-100">
+              <span>💡 <strong>貼心提醒</strong>：電梯直達高樓層；若搭計程車直接出示「부산진구 중앙대로 752」給司機看。</span>
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?q=부산진구+중앙대로+752" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('부산진구 중앙대로 752')" class="px-2 py-1 bg-milktea-100 text-milktea-800 rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製地址
+              </button>
+              <button onclick="openNaver('부산진구 중앙대로 752')" class="px-2 py-1 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                Naver搜尋
+              </button>
+            </div>
+          </div>
+
+          <!-- Item 3: 味贊王 -->
+          <div class="p-2.5 bg-rose-50/60 rounded-xl border border-rose-100 space-y-1.5">
+            <div class="flex justify-between items-center font-bold text-slate-800">
+              <span>🥩 18:10 – 19:40 味贊王鹽烤肉 西面店</span>
+              <span class="text-[10px] text-rose-600 font-bold bg-white px-1.5 py-0.5 rounded border border-rose-200">專人代烤</span>
+            </div>
+            <p class="text-slate-600 text-[11px]">3.5cm 厚切熟成豬五花，專人桌邊代烤完全免動手。</p>
+            <div class="p-1.5 bg-sky-50/70 rounded-lg text-[10px] text-sky-800 flex items-center gap-1 border border-sky-100">
+              <span>🌤️ 天氣狀況：日落後氣溫降至 5°C 左右，西面巷弄偶有樓縫風，備妥圍巾。</span>
+            </div>
+            <div class="p-1.5 bg-rose-100/70 text-rose-800 rounded-lg text-[10px] border border-rose-200">
+              🤰 <strong>貼心提醒（孕婦友善）</strong>：主動向店員出示「바싹 구워주세요（請幫我烤全熟一點）」，外酥內嫩全熟無血水，安心又美味！
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?cid=10128160011307536382" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('맛찬들왕소금구이 서면점')" class="px-2 py-1 bg-milktea-100 text-milktea-800 rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製韓文
+              </button>
+              <button onclick="openNaver('맛찬들왕소금구이 서면점')" class="px-2 py-1 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                Naver導航
+              </button>
+            </div>
+          </div>
+
+          <!-- Item 4: 西面地下街 -->
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
+            <div class="font-bold text-slate-800">🛍️ 19:40 – 21:30 西面地下街輕鬆逛</div>
+            <p class="text-slate-600 text-[11px]">全室內避寒，地面極其平坦好走，沿著地下街一路慢慢散步採買回釜田站。</p>
+            <div class="p-1.5 bg-amber-50 rounded-lg text-[10px] text-amber-800 flex items-center gap-1 border border-amber-100">
+              <span>🌤️ 天氣狀況：地下街暖氣充足，建議採洋蔥式穿搭，進室內可脫外套拿在手上。</span>
+            </div>
+            <div class="p-1.5 bg-white rounded-lg text-[10px] text-slate-500 border border-slate-100">
+              💡 <strong>貼心提醒</strong>：地下街連通西面站至釜田站，無任何戶外斜坡與階梯，推行李或散步極為省力。
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?cid=13088219493130638520" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="openNaver('서면지하도상가')" class="px-2 py-1 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                Naver搜尋
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Day 2 -->
+      <div class="hand-card border border-milktea-200 overflow-hidden">
+        <div onclick="toggleDay('day2')" class="p-3.5 bg-gradient-to-r from-ocean-50 to-white flex items-center justify-between cursor-pointer">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-xl bg-ocean-600 text-white flex items-center justify-center text-xs font-bold font-hand">D2</span>
+            <div>
+              <div class="text-xs font-bold text-slate-900">12/05 (六) 童話村與南浦商圈</div>
+              <div class="text-[10px] text-ocean-600">甘川洞 ➔ BIFF黑糖餅 ➔ 光復路 ➔ 密陽血腸湯飯</div>
+            </div>
+          </div>
+          <i data-lucide="chevron-down" id="arrow-day2" class="w-4 h-4 text-slate-400 transition-transform"></i>
+        </div>
+        <div id="content-day2" class="day-body p-3.5 border-t border-milktea-100 space-y-3 text-xs hidden">
+          <!-- Item 1: 甘川洞 -->
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
+            <div class="flex justify-between items-center font-bold text-slate-800">
+              <span>🎨 10:15 – 12:00 甘川洞文化村 (平緩主街)</span>
+              <span class="text-[10px] text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded font-bold">避開階梯</span>
+            </div>
+            <p class="text-slate-600 text-[11px]">土城站6號出口搭小巴直達最高處「甘川小學站」。沿平緩主幹道看彩色積木房屋，與小王子雕像合影。</p>
+            <div class="p-1.5 bg-sky-50/70 rounded-lg text-[10px] text-sky-800 border border-sky-100">
+              🌤️ <strong>天氣狀況</strong>：山頂風稍大，體感約 6°C~8°C，上午陽光充足但記得戴毛帽與防風圍巾。
+            </div>
+            <div class="p-1.5 bg-amber-50 rounded-lg text-[10px] text-amber-800 border border-amber-100">
+              💡 <strong>貼心提醒</strong>：千萬不要往下走進居民陡峭梯田小徑！只走入口處的平緩主街，既好走又能拍到最美的俯瞰全景。
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?cid=10916164570297726627" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('감천문화마을')" class="px-2 py-1 bg-milktea-100 text-milktea-800 rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製韓文
+              </button>
+              <button onclick="openNaver('감천문화마을')" class="px-2 py-1 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                Naver導航
+              </button>
+            </div>
+          </div>
+
+          <!-- Item 2: BIFF 廣場 -->
+          <div class="p-2.5 bg-amber-50/70 rounded-xl border border-amber-100 space-y-1.5">
+            <div class="flex justify-between items-center font-bold text-slate-800">
+              <span>🥞 12:30 – 14:00 BIFF 廣場堅果黑糖餅</span>
+              <span class="text-[10px] text-amber-700 bg-white px-1.5 py-0.5 rounded border border-amber-200">現點現炸</span>
+            </div>
+            <p class="text-slate-600 text-[11px]">甘川洞搭公車下山直達札嘎其商圈。品嚐招牌現炸堅果黑糖餅（씨앗호떡），塞滿滿滿的香酥葵花籽。</p>
+            <div class="p-1.5 bg-sky-50/70 rounded-lg text-[10px] text-sky-800 border border-sky-100">
+              🌤️ <strong>天氣狀況</strong>：市區正午陽光和煦約 10°C，捧著熱騰騰黑糖餅吃暖手又暖胃。
+            </div>
+            <div class="p-1.5 bg-white rounded-lg text-[10px] text-slate-500 border border-slate-100">
+              💡 <strong>貼心提醒</strong>：黑糖融漿非常燙口，咬第一口請小口慢吹；旁邊備有紙杯方便手拿不沾手。
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?cid=17565706598579998144" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('BIFF 광장 씨앗호떡')" class="px-2 py-1 bg-milktea-100 text-milktea-800 rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製韓文
+              </button>
+              <button onclick="openNaver('BIFF광장')" class="px-2 py-1 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                Naver導航
+              </button>
+            </div>
+          </div>
+
+          <!-- Item 3: 南浦洞光復路 -->
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
+            <div class="font-bold text-slate-800">🛍️ 14:00 – 16:30 南浦洞光復路時尚街</div>
+            <p class="text-slate-600 text-[11px]">寬敞平整的行人專用徒步區，一路逛服飾潮牌與美妝店，順向漫步朝南浦站前進。</p>
+            <div class="p-1.5 bg-sky-50/70 rounded-lg text-[10px] text-sky-800 border border-sky-100">
+              🌤️ <strong>天氣狀況</strong>：午後街道溫和約 9°C，室內店面暖氣強，逛街舒適。
+            </div>
+            <div class="p-1.5 bg-amber-50 rounded-lg text-[10px] text-amber-800 border border-amber-100">
+              💡 <strong>貼心提醒</strong>：全程平坦柏油與地磚路面，無任何階梯，沿途有多間咖啡館可隨時進去洗手間小憩。
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?cid=12143093258522307185" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="openNaver('광복로패션거리')" class="px-2 py-1 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                Naver搜尋
+              </button>
+            </div>
+          </div>
+
+          <!-- Item 4: 密陽血腸豬肉湯飯 -->
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
+            <div class="flex justify-between items-center font-bold text-slate-800">
+              <span>🍲 16:30 – 17:40 密陽血腸豬肉湯飯 (南浦店)</span>
+              <span class="text-[10px] text-rose-600 font-bold bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200">24H名店</span>
+            </div>
+            <p class="text-slate-600 text-[11px]">慢火熬煮的大骨濃郁白湯，豬肉片鮮甜軟嫩，搭配手工血腸暖心暖胃。</p>
+            <div class="p-1.5 bg-rose-100/70 text-rose-800 rounded-lg text-[10px] border border-rose-200">
+              🤰 <strong>貼心提醒（孕婦友善）</strong>：大骨高湯與肉片全滾煮透熟，熱騰騰無腥味，蛋白質滋補滿分！若不習慣血腸可單點純豬肉湯飯（돼지국밥）。
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?cid=8471627215776166651" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('밀양순대돼지국밥 남포점')" class="px-2 py-1 bg-milktea-100 text-milktea-800 rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製韓文
+              </button>
+              <button onclick="openNaver('밀양순대돼지국밥 남포점')" class="px-2 py-1 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                Naver導航
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Day 3 -->
+      <div class="hand-card border border-milktea-200 overflow-hidden">
+        <div onclick="toggleDay('day3')" class="p-3.5 bg-gradient-to-r from-blue-50 to-white flex items-center justify-between cursor-pointer">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-xl bg-sky-600 text-white flex items-center justify-center text-xs font-bold font-hand">D3</span>
+            <div>
+              <div class="text-xs font-bold text-slate-900">12/06 (日) 海雲台海景與鮮甜海鮮</div>
+              <div class="text-[10px] text-sky-600">31cm海鮮麵 ➔ 海灘漫步 ➔ 洞穴咖啡 ➔ 鱈魚湯</div>
+            </div>
+          </div>
+          <i data-lucide="chevron-down" id="arrow-day3" class="w-4 h-4 text-slate-400 transition-transform"></i>
+        </div>
+        <div id="content-day3" class="day-body p-3.5 border-t border-milktea-100 space-y-3 text-xs hidden">
+          <!-- Item 1: 31cm 麵 -->
+          <div class="p-2.5 bg-sky-50/60 rounded-xl border border-sky-100 space-y-1.5">
+            <div class="flex justify-between items-center font-bold text-slate-800">
+              <span>🍜 11:30 – 12:50 海雲台 31cm 海鮮刀削麵</span>
+              <span class="text-[10px] text-ocean-700 bg-white px-1.5 py-0.5 rounded border border-ocean-200">鮮貝大盆</span>
+            </div>
+            <p class="text-slate-600 text-[11px]">大碗鋪滿淡菜、蛤蜊與扇貝，手擀刀削麵 Q 彈嚼勁十足。</p>
+            <div class="p-1.5 bg-sky-100/70 text-sky-900 rounded-lg text-[10px] border border-sky-200">
+              🥣 <strong>貼心提醒（孕婦友善）</strong>：貝類全部皆滾水高溫大火煮至全開全熟，清甜高湯天然安心！配菜泡菜偏辣，沾微量提味即可。
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?cid=17875480895709150251" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('해운대31cm해물칼국수')" class="px-2 py-1 bg-milktea-100 text-milktea-800 rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製韓文
+              </button>
+              <button onclick="openNaver('해운대31cm해물칼국수')" class="px-2 py-1 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                Naver導航
+              </button>
+            </div>
+          </div>
+
+          <!-- Item 2: 海雲台市場與沙灘漫步 -->
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
+            <div class="font-bold text-slate-800">🌊 13:00 – 14:00 海雲台傳統市場 & 海灘木棧道</div>
+            <p class="text-slate-600 text-[11px]">穿過熱鬧傳統市場後抵達海灘，沿著平整的專用木棧道悠閒漫步看海。</p>
+            <div class="p-1.5 bg-sky-50/70 rounded-lg text-[10px] text-sky-800 border border-sky-100">
+              🌤️ <strong>天氣狀況</strong>：海邊冬風陣陣，體感溫度約 3°C~5°C，務必將羽絨衣拉鍊拉好、圍巾繞緊防風。
+            </div>
+            <div class="p-1.5 bg-amber-50 rounded-lg text-[10px] text-amber-800 border border-amber-100">
+              💡 <strong>貼心提醒</strong>：走木棧道避開踩進鬆軟沙灘耗費體力，木棧道平坦寬敞、推車散步都非常輕鬆。
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?cid=1690566373738096277" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="openNaver('해운대해수욕장')" class="px-2 py-1 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                Naver搜尋
+              </button>
+            </div>
+          </div>
+
+          <!-- Item 3: Rendezja-vous 咖啡 -->
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
+            <div class="flex justify-between items-center font-bold text-slate-800">
+              <span>☕ 14:15 – 16:30 Rendezja-vous 洞穴海景咖啡</span>
+              <span class="text-[10px] text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded font-bold">海景窗位</span>
+            </div>
+            <p class="text-slate-600 text-[11px]">海雲台東側高樓層海景第一排，濟州玄武岩造景，點熱伯爵奶茶或熱可可放空。</p>
+            <div class="p-1.5 bg-amber-50 rounded-lg text-[10px] text-amber-800 border border-amber-100">
+              💡 <strong>貼心提醒</strong>：店內備有電梯直達高樓層，設有面海軟沙發座，走完沙灘後在此歇腿、暖身是最佳中繼點。
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?cid=11140925232986423985" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('랑데자뷰 해운대점')" class="px-2 py-1 bg-milktea-100 text-milktea-800 rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製韓文
+              </button>
+              <button onclick="openNaver('랑데자뷰 해운대점')" class="px-2 py-1 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                Naver導航
+              </button>
+            </div>
+          </div>
+
+          <!-- Item 4: 舒暢鱈魚湯 -->
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
+            <div class="flex justify-between items-center font-bold text-slate-800">
+              <span>🐟 17:00 – 18:20 舒暢鱈魚湯 (尾浦本店)</span>
+              <span class="text-[10px] text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded font-bold">冬日暖胃</span>
+            </div>
+            <p class="text-slate-600 text-[11px]">清燉白蘿蔔與大塊新鮮鱈魚，魚肉厚實飽滿無腥味，湯頭清甜甘美。</p>
+            <div class="p-1.5 bg-teal-100/70 text-teal-900 rounded-lg text-[10px] border border-teal-200">
+              🥣 <strong>貼心提醒</strong>：清湯無辛辣刺激，全煮熟魚肉安全溫補，極適合冬夜驅寒；吃飽後門口直接搭短程計程車回地鐵站最省力。
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?cid=17570157959104118665" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('속씨원한대구탕 미포본점')" class="px-2 py-1 bg-milktea-100 text-milktea-800 rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製韓文
+              </button>
+              <button onclick="openNaver('속씨원한대구탕 미포본점')" class="px-2 py-1 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                Naver導航
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Day 4 -->
+      <div class="hand-card border border-milktea-200 overflow-hidden">
+        <div onclick="toggleDay('day4')" class="p-3.5 bg-gradient-to-r from-amber-50 to-white flex items-center justify-between cursor-pointer">
+          <div class="flex items-center gap-2">
+            <span class="w-7 h-7 rounded-xl bg-amber-600 text-white flex items-center justify-center text-xs font-bold font-hand">D4</span>
+            <div>
+              <div class="text-xs font-bold text-slate-900">12/07 (一) 廣安大橋與和牛午餐</div>
+              <div class="text-[10px] text-amber-700">退房 ➔ 廣安沙灘 ➔ 釜山家彥陽牛肉 ➔ 機場</div>
+            </div>
+          </div>
+          <i data-lucide="chevron-down" id="arrow-day4" class="w-4 h-4 text-slate-400 transition-transform"></i>
+        </div>
+        <div id="content-day4" class="day-body p-3.5 border-t border-milktea-100 space-y-3 text-xs hidden">
+          <!-- Item 1: 釜山家彥陽烤牛肉 -->
+          <div class="p-2.5 bg-rose-50/70 rounded-xl border border-rose-100 space-y-1.5">
+            <div class="flex justify-between items-center font-bold text-slate-800">
+              <span>🥩 11:45 – 13:15 釜山家彥陽烤牛肉</span>
+              <span class="text-[10px] text-rose-600 font-bold bg-white px-1.5 py-0.5 rounded border border-rose-200">廣安里名店</span>
+            </div>
+            <p class="text-slate-600 text-[11px]">炭火特製甘醇醬汁醃製薄切韓牛，肉質軟嫩化口，完全不費牙口。</p>
+            <div class="p-1.5 bg-rose-100/70 text-rose-800 rounded-lg text-[10px] border border-rose-200">
+              🤰 <strong>貼心提醒（孕婦友善）</strong>：薄片牛肉上鐵網炭火烤透後香嫩可口，完全烤熟依然滑嫩，搭配白飯是大滿足！
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?cid=6434751662107900609" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('부산집언양불고기')" class="px-2 py-1 bg-milktea-100 text-milktea-800 rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製韓文
+              </button>
+              <button onclick="openNaver('부산집언양불고기')" class="px-2 py-1 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                Naver導航
+              </button>
+            </div>
+          </div>
+
+          <!-- Item 2: 廣安里海灘 & 次選策咖啡 -->
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
+            <div class="font-bold text-slate-800">🌉 13:30 – 16:00 廣安里海水浴場 & 次選策咖啡</div>
+            <p class="text-slate-600 text-[11px]">沙灘正對壯麗廣安大橋合照，隨後走入海景第一排「次選策（차선책）」品嚐低糖純米蛋糕與熱茶。</p>
+            <div class="p-1.5 bg-sky-50/70 rounded-lg text-[10px] text-sky-800 border border-sky-100">
+              🌤️ <strong>天氣狀況</strong>：午後冬陽照耀海面約 10°C~11°C，海景咖啡廳室內溫暖舒適。
+            </div>
+            <div class="p-1.5 bg-amber-50 rounded-lg text-[10px] text-amber-800 border border-amber-100">
+              💡 <strong>貼心提醒</strong>：次選策位於電梯大樓 3 樓，無麩質純米蛋糕清爽低負擔，坐窗邊可將廣安大橋全景盡收眼底。
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?cid=12140409090623630635" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('차선책 광안리')" class="px-2 py-1 bg-milktea-100 text-milktea-800 rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製韓文
+              </button>
+              <button onclick="openNaver('차선책 광안리점')" class="px-2 py-1 bg-emerald-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                Naver搜尋
+              </button>
+            </div>
+          </div>
+
+          <!-- Item 3: 回西面拿行李與搭機 -->
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 space-y-1.5">
+            <div class="font-bold text-slate-800">✈️ 17:00 – 22:00 取回行李 ➔ 金海機場搭機</div>
+            <p class="text-slate-600 text-[11px]">回西面/釜田住宿領取托運行李，搭乘地鐵至沙上站轉輕軌前往機場，22:00 濟州航空 7C6163 返台。</p>
+            <div class="p-1.5 bg-amber-50 rounded-lg text-[10px] text-amber-800 border border-amber-100">
+              🚖 <strong>省力貼心備案</strong>：若提戰利品感到疲憊，可直接用 Uber / Kakao T 從西面叫計程車直達金海機場（約 KRW 19,000~23,000，25分鐘直達），免去上下地鐵搬動行李。
+            </div>
+            <div class="flex gap-1.5 pt-1">
+              <a href="https://maps.google.com/?cid=12002511425686008630" target="_blank" class="px-2 py-1 bg-ocean-600 text-white rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google機場導航
+              </a>
+              <button onclick="copyText('김해국제공항 국제선')" class="px-2 py-1 bg-milktea-100 text-milktea-800 rounded-md text-[10px] font-bold flex items-center gap-1">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製機場韓文
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ==========================================
+         TAB 3: 互動地圖 (MAPS & PLACES)
+         ========================================== -->
+    <section id="tab-map" class="tab-panel hidden space-y-3">
+      <div class="hand-card p-4 border border-milktea-200">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+            <i data-lucide="map-pin" class="w-4 h-4 text-ocean-600"></i>
+            全景點美食導航清單
+          </h2>
+          <span class="text-[10px] text-milktea-700 bg-milktea-100 px-2 py-0.5 rounded-full font-bold">共 11 個點位</span>
+        </div>
+        <p class="text-xs text-slate-500 mb-3">
+          整合行程中所有景點、美食與交通站點，支援一鍵開啟 Google Maps 或複製韓文貼入 Naver Map：
+        </p>
+
+        <!-- 天數快速篩選器 -->
+        <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-2 mb-2">
+          <button onclick="filterMapPlaces('all')" class="map-filter-btn px-2.5 py-1 rounded-xl text-xs font-bold bg-ocean-600 text-white shrink-0" data-filter="all">全部地點</button>
+          <button onclick="filterMapPlaces('day1')" class="map-filter-btn px-2.5 py-1 rounded-xl text-xs font-medium bg-slate-100 text-slate-600 shrink-0" data-filter="day1">Day 1 西面</button>
+          <button onclick="filterMapPlaces('day2')" class="map-filter-btn px-2.5 py-1 rounded-xl text-xs font-medium bg-slate-100 text-slate-600 shrink-0" data-filter="day2">Day 2 南浦洞</button>
+          <button onclick="filterMapPlaces('day3')" class="map-filter-btn px-2.5 py-1 rounded-xl text-xs font-medium bg-slate-100 text-slate-600 shrink-0" data-filter="day3">Day 3 海雲台</button>
+          <button onclick="filterMapPlaces('day4')" class="map-filter-btn px-2.5 py-1 rounded-xl text-xs font-medium bg-slate-100 text-slate-600 shrink-0" data-filter="day4">Day 4 廣安里</button>
+        </div>
+
+        <!-- 完整地點卡片容器 -->
+        <div id="placesContainer" class="space-y-2.5 text-xs">
+          <!-- 1. Gem Stay Seomyeon (D1) -->
+          <div class="place-item p-3 bg-slate-50 rounded-2xl border border-slate-200" data-day="day1">
+            <div class="flex justify-between items-start mb-1">
+              <div>
+                <span class="text-[10px] font-bold text-milktea-700 bg-milktea-100 px-1.5 py-0.5 rounded mr-1">D1 住宿</span>
+                <span class="font-bold text-slate-900 text-sm">Gem Stay Seomyeon</span>
+                <div class="text-[11px] text-slate-500 font-mono mt-0.5">젬스테이 서면 (#204)</div>
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 my-1.5">
+              📍 韓文地址：부산진구 중앙대로 752 (부전역 7번 출구)
+            </div>
+            <div class="flex gap-1.5">
+              <a href="https://maps.google.com/?q=부산진구+중앙대로+752" target="_blank" class="flex-1 py-1.5 bg-ocean-600 hover:bg-ocean-700 text-white rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('부산진구 중앙대로 752')" class="flex-1 py-1.5 bg-milktea-100 hover:bg-milktea-200 text-milktea-800 rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製地址
+              </button>
+              <button onclick="openNaver('부산진구 중앙대로 752')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-center font-bold text-[11px]">
+                Naver
+              </button>
+            </div>
+          </div>
+
+          <!-- 2. 味贊王鹽烤肉 西面店 (D1) -->
+          <div class="place-item p-3 bg-slate-50 rounded-2xl border border-slate-200" data-day="day1">
+            <div class="flex justify-between items-start mb-1">
+              <div>
+                <span class="text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded mr-1">D1 美食</span>
+                <span class="font-bold text-slate-900 text-sm">味贊王鹽烤肉 西面店</span>
+                <div class="text-[11px] text-slate-500 mt-0.5">맛찬들왕소금구이 서면점</div>
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 my-1.5">
+              📍 韓文地址：부산 부산진구 중앙대로691번가길 24-3
+            </div>
+            <div class="flex gap-1.5">
+              <a href="https://maps.google.com/?cid=10128160011307536382" target="_blank" class="flex-1 py-1.5 bg-ocean-600 hover:bg-ocean-700 text-white rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('부산 부산진구 중앙대로691번가길 24-3')" class="flex-1 py-1.5 bg-milktea-100 hover:bg-milktea-200 text-milktea-800 rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製地址
+              </button>
+              <button onclick="openNaver('맛찬들왕소금구이 서면점')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-center font-bold text-[11px]">
+                Naver
+              </button>
+            </div>
+          </div>
+
+          <!-- 3. 西面地下街 (D1) -->
+          <div class="place-item p-3 bg-slate-50 rounded-2xl border border-slate-200" data-day="day1">
+            <div class="flex justify-between items-start mb-1">
+              <div>
+                <span class="text-[10px] font-bold text-ocean-700 bg-ocean-50 px-1.5 py-0.5 rounded mr-1">D1 購物</span>
+                <span class="font-bold text-slate-900 text-sm">西面地下商街</span>
+                <div class="text-[11px] text-slate-500 mt-0.5">서면지하도상가</div>
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 my-1.5">
+              📍 韓文地址：부산 부산진구 중앙대로 737
+            </div>
+            <div class="flex gap-1.5">
+              <a href="https://maps.google.com/?cid=13088219493130638520" target="_blank" class="flex-1 py-1.5 bg-ocean-600 hover:bg-ocean-700 text-white rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('부산 부산진구 중앙대로 737')" class="flex-1 py-1.5 bg-milktea-100 hover:bg-milktea-200 text-milktea-800 rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製地址
+              </button>
+              <button onclick="openNaver('서면지하도상가')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-center font-bold text-[11px]">
+                Naver
+              </button>
+            </div>
+          </div>
+
+          <!-- 4. 甘川洞文化村 (D2) -->
+          <div class="place-item p-3 bg-slate-50 rounded-2xl border border-slate-200" data-day="day2">
+            <div class="flex justify-between items-start mb-1">
+              <div>
+                <span class="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded mr-1">D2 景點</span>
+                <span class="font-bold text-slate-900 text-sm">甘川洞文化村</span>
+                <div class="text-[11px] text-slate-500 mt-0.5">감천문화마을</div>
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 my-1.5">
+              📍 韓文地址：부산 사하구 감내2로 203
+            </div>
+            <div class="flex gap-1.5">
+              <a href="https://maps.google.com/?cid=10916164570297726627" target="_blank" class="flex-1 py-1.5 bg-ocean-600 hover:bg-ocean-700 text-white rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('부산 사하구 감내2로 203')" class="flex-1 py-1.5 bg-milktea-100 hover:bg-milktea-200 text-milktea-800 rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製地址
+              </button>
+              <button onclick="openNaver('감천문화마을')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-center font-bold text-[11px]">
+                Naver
+              </button>
+            </div>
+          </div>
+
+          <!-- 5. BIFF 廣場 (D2) -->
+          <div class="place-item p-3 bg-slate-50 rounded-2xl border border-slate-200" data-day="day2">
+            <div class="flex justify-between items-start mb-1">
+              <div>
+                <span class="text-[10px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded mr-1">D2 小吃</span>
+                <span class="font-bold text-slate-900 text-sm">BIFF 廣場 (堅果黑糖餅)</span>
+                <div class="text-[11px] text-slate-500 mt-0.5">BIFF 광장 씨앗호떡</div>
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 my-1.5">
+              📍 韓文地址：부산 중구 비프광장로 20
+            </div>
+            <div class="flex gap-1.5">
+              <a href="https://maps.google.com/?cid=17565706598579998144" target="_blank" class="flex-1 py-1.5 bg-ocean-600 hover:bg-ocean-700 text-white rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('부산 중구 비프광장로 20')" class="flex-1 py-1.5 bg-milktea-100 hover:bg-milktea-200 text-milktea-800 rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製地址
+              </button>
+              <button onclick="openNaver('BIFF광장')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-center font-bold text-[11px]">
+                Naver
+              </button>
+            </div>
+          </div>
+
+          <!-- 6. 光復路時尚街 (D2) -->
+          <div class="place-item p-3 bg-slate-50 rounded-2xl border border-slate-200" data-day="day2">
+            <div class="flex justify-between items-start mb-1">
+              <div>
+                <span class="text-[10px] font-bold text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded mr-1">D2 逛街</span>
+                <span class="font-bold text-slate-900 text-sm">南浦洞光復路時尚街</span>
+                <div class="text-[11px] text-slate-500 mt-0.5">광복로패션거리</div>
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 my-1.5">
+              📍 韓文地址：부산 중구 광복로 74
+            </div>
+            <div class="flex gap-1.5">
+              <a href="https://maps.google.com/?cid=12143093258522307185" target="_blank" class="flex-1 py-1.5 bg-ocean-600 hover:bg-ocean-700 text-white rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('부산 중구 광복로 74')" class="flex-1 py-1.5 bg-milktea-100 hover:bg-milktea-200 text-milktea-800 rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製地址
+              </button>
+              <button onclick="openNaver('광복로패션거리')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-center font-bold text-[11px]">
+                Naver
+              </button>
+            </div>
+          </div>
+
+          <!-- 7. 密陽血腸豬肉湯飯 (D2) -->
+          <div class="place-item p-3 bg-slate-50 rounded-2xl border border-slate-200" data-day="day2">
+            <div class="flex justify-between items-start mb-1">
+              <div>
+                <span class="text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded mr-1">D2 晚餐</span>
+                <span class="font-bold text-slate-900 text-sm">密陽血腸豬肉湯飯 (南浦店)</span>
+                <div class="text-[11px] text-slate-500 mt-0.5">밀양순대돼지국밥 남포점</div>
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 my-1.5">
+              📍 韓文地址：부산 중구 광복로6번길 5
+            </div>
+            <div class="flex gap-1.5">
+              <a href="https://maps.google.com/?cid=8471627215776166651" target="_blank" class="flex-1 py-1.5 bg-ocean-600 hover:bg-ocean-700 text-white rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('부산 중구 광복로6번길 5')" class="flex-1 py-1.5 bg-milktea-100 hover:bg-milktea-200 text-milktea-800 rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製地址
+              </button>
+              <button onclick="openNaver('밀양순대돼지국밥 남포점')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-center font-bold text-[11px]">
+                Naver
+              </button>
+            </div>
+          </div>
+
+          <!-- 8. 海雲台 31cm 海鮮刀削麵 (D3) -->
+          <div class="place-item p-3 bg-slate-50 rounded-2xl border border-slate-200" data-day="day3">
+            <div class="flex justify-between items-start mb-1">
+              <div>
+                <span class="text-[10px] font-bold text-sky-700 bg-sky-50 px-1.5 py-0.5 rounded mr-1">D3 午餐</span>
+                <span class="font-bold text-slate-900 text-sm">海雲台 31cm 海鮮刀削麵</span>
+                <div class="text-[11px] text-slate-500 mt-0.5">해운대31cm해물칼국수</div>
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 my-1.5">
+              📍 韓文地址：부산 해운대구 구남로41번길 46
+            </div>
+            <div class="flex gap-1.5">
+              <a href="https://maps.google.com/?cid=17875480895709150251" target="_blank" class="flex-1 py-1.5 bg-ocean-600 hover:bg-ocean-700 text-white rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('부산 해운대구 구남로41번길 46')" class="flex-1 py-1.5 bg-milktea-100 hover:bg-milktea-200 text-milktea-800 rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製地址
+              </button>
+              <button onclick="openNaver('해운대31cm해물칼국수')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-center font-bold text-[11px]">
+                Naver
+              </button>
+            </div>
+          </div>
+
+          <!-- 9. Rendezja-vous 海雲台店 (D3) -->
+          <div class="place-item p-3 bg-slate-50 rounded-2xl border border-slate-200" data-day="day3">
+            <div class="flex justify-between items-start mb-1">
+              <div>
+                <span class="text-[10px] font-bold text-purple-700 bg-purple-50 px-1.5 py-0.5 rounded mr-1">D3 咖啡</span>
+                <span class="font-bold text-slate-900 text-sm">Rendezja-vous 海雲台店</span>
+                <div class="text-[11px] text-slate-500 mt-0.5">랑데자뷰 해운대점</div>
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 my-1.5">
+              📍 韓文地址：부산 해운대구 달맞이길62번길 23 3층
+            </div>
+            <div class="flex gap-1.5">
+              <a href="https://maps.google.com/?cid=11140925232986423985" target="_blank" class="flex-1 py-1.5 bg-ocean-600 hover:bg-ocean-700 text-white rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('부산 해운대구 달맞이길62번길 23')" class="flex-1 py-1.5 bg-milktea-100 hover:bg-milktea-200 text-milktea-800 rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製地址
+              </button>
+              <button onclick="openNaver('랑데자뷰 해운대점')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-center font-bold text-[11px]">
+                Naver
+              </button>
+            </div>
+          </div>
+
+          <!-- 10. 舒暢鱈魚湯 尾浦本店 (D3) -->
+          <div class="place-item p-3 bg-slate-50 rounded-2xl border border-slate-200" data-day="day3">
+            <div class="flex justify-between items-start mb-1">
+              <div>
+                <span class="text-[10px] font-bold text-teal-700 bg-teal-50 px-1.5 py-0.5 rounded mr-1">D3 晚餐</span>
+                <span class="font-bold text-slate-900 text-sm">舒暢鱈魚湯 (尾浦本店)</span>
+                <div class="text-[11px] text-slate-500 mt-0.5">속씨원한대구탕 미포본점</div>
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 my-1.5">
+              📍 韓文地址：부산 해운대구 달맞이길62번길 28
+            </div>
+            <div class="flex gap-1.5">
+              <a href="https://maps.google.com/?cid=17570157959104118665" target="_blank" class="flex-1 py-1.5 bg-ocean-600 hover:bg-ocean-700 text-white rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('부산 해운대구 달맞이길62번길 28')" class="flex-1 py-1.5 bg-milktea-100 hover:bg-milktea-200 text-milktea-800 rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製地址
+              </button>
+              <button onclick="openNaver('속씨원한대구탕 미포본점')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-center font-bold text-[11px]">
+                Naver
+              </button>
+            </div>
+          </div>
+
+          <!-- 11. 釜山家彥陽烤牛肉 (D4) -->
+          <div class="place-item p-3 bg-slate-50 rounded-2xl border border-slate-200" data-day="day4">
+            <div class="flex justify-between items-start mb-1">
+              <div>
+                <span class="text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded mr-1">D4 午餐</span>
+                <span class="font-bold text-slate-900 text-sm">釜山家彥陽烤牛肉</span>
+                <div class="text-[11px] text-slate-500 mt-0.5">부산집언양불고기</div>
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-600 bg-white p-2 rounded-xl border border-slate-100 my-1.5">
+              📍 韓文地址：부산 수영구 남천바다로 32
+            </div>
+            <div class="flex gap-1.5">
+              <a href="https://maps.google.com/?cid=6434751662107900609" target="_blank" class="flex-1 py-1.5 bg-ocean-600 hover:bg-ocean-700 text-white rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="navigation" class="w-3 h-3"></i> Google導航
+              </a>
+              <button onclick="copyText('부산 수영구 남천바다로 32')" class="flex-1 py-1.5 bg-milktea-100 hover:bg-milktea-200 text-milktea-800 rounded-xl text-center font-bold flex items-center justify-center gap-1 text-[11px]">
+                <i data-lucide="copy" class="w-3 h-3"></i> 複製地址
+              </button>
+              <button onclick="openNaver('부산집언양불고기')" class="px-2.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-center font-bold text-[11px]">
+                Naver
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 4: 天氣與穿搭 (WEATHER & WEAR)
+         ========================================== -->
+    <section id="tab-weather" class="tab-panel hidden space-y-3">
+      <div class="hand-card p-4 border border-milktea-200">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+            <i data-lucide="cloud-sun" class="w-4 h-4 text-ocean-600"></i>
+            12月釜山氣候預報 (冬季晴朗乾燥)
+          </h2>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-bold">平均 3°C ~ 11°C</span>
+        </div>
+
+        <!-- 4日氣溫預覽格 -->
+        <div class="grid grid-cols-4 gap-2 text-center text-xs mb-4">
+          <div class="p-2 rounded-xl bg-milktea-50 border border-milktea-200">
+            <div class="text-[10px] text-slate-400 font-medium">12/04 五</div>
+            <div class="text-xl my-0.5">⛅</div>
+            <div class="font-bold text-slate-800">11° / 4°</div>
+            <div class="text-[9px] text-slate-500">西面</div>
+          </div>
+          <div class="p-2 rounded-xl bg-milktea-50 border border-milktea-200">
+            <div class="text-[10px] text-slate-400 font-medium">12/05 六</div>
+            <div class="text-xl my-0.5">☀️</div>
+            <div class="font-bold text-slate-800">10° / 3°</div>
+            <div class="text-[9px] text-slate-500">南浦</div>
+          </div>
+          <div class="p-2 rounded-xl bg-ocean-50 border border-ocean-200">
+            <div class="text-[10px] text-slate-400 font-medium">12/06 日</div>
+            <div class="text-xl my-0.5">🌤️</div>
+            <div class="font-bold text-slate-800">9° / 2°</div>
+            <div class="text-[9px] text-ocean-700">海風微冷</div>
+          </div>
+          <div class="p-2 rounded-xl bg-milktea-50 border border-milktea-200">
+            <div class="text-[10px] text-slate-400 font-medium">12/07 一</div>
+            <div class="text-xl my-0.5">☀️</div>
+            <div class="font-bold text-slate-800">11° / 4°</div>
+            <div class="text-[9px] text-slate-500">廣安</div>
+          </div>
+        </div>
+
+        <!-- 洋蔥式穿搭指南 -->
+        <h3 class="text-xs font-bold text-slate-900 mb-2 flex items-center gap-1">
+          <span>🧣</span> 冬日防風保暖穿著建議
+        </h3>
+        <div class="space-y-2 text-xs text-slate-600">
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex items-start gap-2">
+            <span class="text-base">🧥</span>
+            <div>
+              <strong class="text-slate-800">外層：防風長版大衣 / 羽絨外套</strong>
+              <p class="text-[11px] text-slate-500 mt-0.5">海雲台與廣安里海風較勁，大衣需具備防風與蓋住膝蓋為佳。</p>
+            </div>
+          </div>
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex items-start gap-2">
+            <span class="text-base">👕</span>
+            <div>
+              <strong class="text-slate-800">內層：發熱衣 + 易脫針織毛衣</strong>
+              <p class="text-[11px] text-slate-500 mt-0.5">地鐵、餐廳及地下街暖氣強烈，採「洋蔥式」方便進出室內穿脫。</p>
+            </div>
+          </div>
+          <div class="p-2.5 bg-slate-50 rounded-xl border border-slate-100 flex items-start gap-2">
+            <span class="text-base">👟</span>
+            <div>
+              <strong class="text-slate-800">配件：防滑好走軟底球鞋、毛帽、圍巾、護手霜</strong>
+              <p class="text-[11px] text-slate-500 mt-0.5">韓國氣候乾燥，隨身備保濕潤唇膏與暖暖包放在口袋隨時取暖。</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 5: 即時換匯 (CURRENCY CONVERTER)
+         ========================================== -->
+    <section id="tab-calc" class="tab-panel hidden space-y-3">
+      <div class="hand-card p-4 border border-milktea-200">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+            <i data-lucide="calculator" class="w-4 h-4 text-ocean-600"></i>
+            韓元 ⇄ 台幣 換算小計算機
+          </h2>
+          <div class="flex items-center gap-1 text-[11px] text-slate-500">
+            <span>匯率:</span>
+            <input id="rateInput" type="number" step="0.1" value="41.5" class="w-12 px-1.5 py-0.5 bg-slate-100 rounded text-center font-bold text-slate-800" oninput="calculateExchange('krw')">
+          </div>
+        </div>
+
+        <!-- 韓幣輸入 -->
+        <div class="p-3 bg-ocean-50/70 rounded-2xl border border-ocean-200 mb-2.5">
+          <div class="flex justify-between items-center text-xs text-ocean-800 font-bold mb-1">
+            <span>KRW 韓元 (₩)</span>
+            <span class="text-[10px] text-ocean-600">韓國消費標價</span>
+          </div>
+          <input id="krwInput" type="number" placeholder="輸入韓元金額，如 15000" class="w-full text-xl font-bold bg-transparent text-slate-900 outline-none" oninput="calculateExchange('krw')" value="10000">
+        </div>
+
+        <!-- 台幣輸出 -->
+        <div class="p-3 bg-milktea-100/70 rounded-2xl border border-milktea-200 mb-3">
+          <div class="flex justify-between items-center text-xs text-milktea-800 font-bold mb-1">
+            <span>TWD 新台幣 (NT$)</span>
+            <span class="text-[10px] text-milktea-600">約折合台幣</span>
+          </div>
+          <div id="twdResult" class="text-2xl font-black text-slate-900 font-mono">
+            NT$ 241
+          </div>
+        </div>
+
+        <!-- 快速面額鈕 -->
+        <div class="grid grid-cols-4 gap-1.5 text-xs">
+          <button onclick="setKrw(5000)" class="py-1.5 bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 rounded-xl">₩5,000</button>
+          <button onclick="setKrw(10000)" class="py-1.5 bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 rounded-xl">₩10,000</button>
+          <button onclick="setKrw(30000)" class="py-1.5 bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 rounded-xl">₩30,000</button>
+          <button onclick="setKrw(50000)" class="py-1.5 bg-slate-100 hover:bg-slate-200 font-bold text-slate-700 rounded-xl">₩50,000</button>
+        </div>
+
+        <!-- 心算小口訣 -->
+        <div class="mt-3 p-2 bg-slate-50 rounded-xl text-[11px] text-slate-500 border border-slate-200/60 text-center">
+          💡 <strong>心算速記秘訣</strong>：去尾數 3 個 0，再乘上 24（例如 ₩10,000 ➔ 10 × 24 ≈ NT$ 240）
+        </div>
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 6: 記帳手帳本 (EXPENSE TRACKER)
+         ========================================== -->
+    <section id="tab-expense" class="tab-panel hidden space-y-3">
+      <div class="hand-card p-4 border border-milktea-200">
+        
+        <!-- 頂部累計金額看板 -->
+        <div class="p-3.5 bg-gradient-to-r from-ocean-700 to-ocean-800 text-white rounded-2xl shadow-sm mb-3">
+          <div class="flex justify-between items-center text-xs opacity-90 mb-1">
+            <span>本次旅費總開銷</span>
+            <span class="text-[10px] bg-white/20 px-2 py-0.5 rounded-full" id="expenseCount">0 筆記錄</span>
+          </div>
+          <div class="flex items-baseline gap-2">
+            <span class="text-2xl font-black font-mono" id="totalKrw">₩0</span>
+            <span class="text-xs opacity-80" id="totalTwd">≈ NT$ 0</span>
+          </div>
+        </div>
+
+        <!-- 新增記帳表單 -->
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 mb-3 space-y-2 text-xs">
+          <div class="flex gap-2">
+            <select id="expCategory" class="px-2 py-1.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-700">
+              <option value="🍽️ 美食">🍽️ 美食</option>
+              <option value="🚇 交通">🚇 交通</option>
+              <option value="🛍️ 購物">🛍️ 購物</option>
+              <option value="☕ 咖啡">☕ 咖啡</option>
+              <option value="🏨 住宿">🏨 住宿</option>
+            </select>
+            <input id="expDesc" type="text" placeholder="項目品名 (如：味贊王烤肉)" class="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-xl outline-none">
+          </div>
+          <div class="flex gap-2">
+            <input id="expAmount" type="number" placeholder="金額 (韓元 KRW)" class="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-xl font-mono outline-none">
+            <button onclick="addExpense()" class="px-4 py-1.5 bg-ocean-600 hover:bg-ocean-700 text-white font-bold rounded-xl shadow-xs">
+              記帳
+            </button>
+          </div>
+        </div>
+
+        <!-- 記帳明細列表 -->
+        <div class="flex justify-between items-center text-xs font-bold text-slate-700 mb-2">
+          <span>消費清單</span>
+          <button onclick="clearAllExpenses()" class="text-[10px] text-slate-400 hover:text-red-500">清空所有</button>
+        </div>
+        <div id="expenseList" class="space-y-1.5 max-h-[300px] overflow-y-auto no-scrollbar text-xs">
+          <!-- 動態渲染項目 -->
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ==========================================
+         TAB 7: 貼心提醒與錦囊 (SWEET TIPS & PHRASES)
+         ========================================== -->
+    <section id="tab-tips" class="tab-panel hidden space-y-3">
+      
+      <!-- 孕婦友善安全提醒卡 -->
+      <div class="hand-card p-4 border border-rose-200 bg-rose-50/40">
+        <div class="flex items-center gap-2 mb-2 text-rose-800 font-bold text-sm">
+          <span>🤰</span>
+          <span>孕婦友善同行 · 暖心提醒</span>
+        </div>
+        <ul class="text-xs text-slate-700 space-y-1.5 list-disc pl-4 leading-relaxed">
+          <li><strong>飲食安全第一</strong>：所有海鮮（如 31cm 刀削麵之貝類）、五花肉、牛肉湯飯務必加熱至全熟，生章魚、生魚片生冷小菜請由另一半代勞。</li>
+          <li><strong>避開陡峭山坡</strong>：甘川洞僅漫步最高處平緩主街拍照，南浦洞光復路與西面地下街皆為全平坦路面，走累隨時挑選咖啡廳小憩。</li>
+          <li><strong>保暖與防滑</strong>：海雲台海風較勁，穿著防風長大衣與防滑好走的平底運動鞋，包包隨時備溫水壺。</li>
+        </ul>
+      </div>
+
+      <!-- 常用韓語求助大字卡 -->
+      <div class="hand-card p-4 border border-milktea-200">
+        <h3 class="text-xs font-bold text-slate-900 mb-2 flex items-center gap-1.5">
+          <i data-lucide="message-square" class="w-4 h-4 text-ocean-600"></i>
+          點選卡片出示給店家 / 司機 (大字模式)
+        </h3>
+
+        <div class="grid grid-cols-1 gap-2 text-xs">
+          <div onclick="showBigModal('완전히 바싹 익혀주세요.', '請幫我烤全熟一點（烤肉店專用）')" class="p-3 bg-slate-50 hover:bg-ocean-50 border border-slate-200 rounded-xl cursor-pointer transition">
+            <div class="text-sm font-bold text-slate-900">완전히 바싹 익혀주세요.</div>
+            <div class="text-[11px] text-slate-500">請幫我烤全熟一點（肉質全熟無血水）</div>
+          </div>
+
+          <div onclick="showBigModal('임산부라 날것은 못 먹어요.', '我是孕婦不能吃生食，請全熟')" class="p-3 bg-slate-50 hover:bg-ocean-50 border border-slate-200 rounded-xl cursor-pointer transition">
+            <div class="text-sm font-bold text-slate-900">임산부라 날것은 못 먹어요.</div>
+            <div class="text-[11px] text-slate-500">我是孕婦不能吃生食，請全熟烹煮</div>
+          </div>
+
+          <div onclick="showBigModal('화장실이 어디예요?', '請問洗手間在哪裡？')" class="p-3 bg-slate-50 hover:bg-ocean-50 border border-slate-200 rounded-xl cursor-pointer transition">
+            <div class="text-sm font-bold text-slate-900">화장실이 어디예요?</div>
+            <div class="text-[11px] text-slate-500">請問洗手間在哪裡？</div>
+          </div>
+
+          <div onclick="showBigModal('계산해 주세요.', '請買單結帳')" class="p-3 bg-slate-50 hover:bg-ocean-50 border border-slate-200 rounded-xl cursor-pointer transition">
+            <div class="text-sm font-bold text-slate-900">계산해 주세요.</div>
+            <div class="text-[11px] text-slate-500">請幫我買單結帳</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 緊急聯絡備忘 -->
+      <div class="hand-card p-3.5 border border-slate-200 text-xs text-slate-600 space-y-1">
+        <div class="font-bold text-slate-800 mb-1">🚨 緊急聯絡與電話撥打</div>
+        <div>民宿房東: <a href="tel:+821076585224" class="text-ocean-600 font-bold">+82 10-7658-5224</a></div>
+        <div>韓國報警專線: 112 / 消防救護: 119</div>
+        <div>外交部旅外急難救助（駐釜山辦事處）: +82-10-4537-7961</div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ==================== 底部固定 APP 導航欄 (6 大功能切換) ==================== -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-[#FFFDF9]/95 backdrop-blur border-t border-milktea-200 shadow-lg">
+    <div class="max-w-[440px] mx-auto grid grid-cols-6 py-2 px-1">
+      <button onclick="switchTab('cover')" id="nav-cover" class="nav-btn flex flex-col items-center justify-center text-ocean-700 font-bold transition">
+        <i data-lucide="book-heart" class="w-4 h-4"></i>
+        <span class="text-[9px] mt-1">手帳封面</span>
+      </button>
+      <button onclick="switchTab('itinerary')" id="nav-itinerary" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
+        <i data-lucide="calendar" class="w-4 h-4"></i>
+        <span class="text-[9px] mt-1">每日行程</span>
+      </button>
+      <button onclick="switchTab('map')" id="nav-map" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
+        <i data-lucide="map" class="w-4 h-4"></i>
+        <span class="text-[9px] mt-1">地圖導航</span>
+      </button>
+      <button onclick="switchTab('weather')" id="nav-weather" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
+        <i data-lucide="sun-snow" class="w-4 h-4"></i>
+        <span class="text-[9px] mt-1">天氣穿搭</span>
+      </button>
+      <button onclick="switchTab('calc')" id="nav-calc" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
+        <i data-lucide="calculator" class="w-4 h-4"></i>
+        <span class="text-[9px] mt-1">即時換匯</span>
+      </button>
+      <button onclick="switchTab('expense')" id="nav-expense" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
+        <i data-lucide="wallet" class="w-4 h-4"></i>
+        <span class="text-[9px] mt-1">旅行記帳</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- 大字出示彈窗 (韓語求助) -->
+  <div id="bigModal" class="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-3xl p-6 w-full max-w-sm text-center space-y-4 shadow-2xl">
+      <div id="modalSub" class="text-xs font-semibold text-slate-400 uppercase tracking-wider">中文說明</div>
+      <div id="modalKor" class="text-2xl font-black text-slate-900 leading-snug break-words">완전히 바싹 익혀주세요.</div>
+      <button onclick="closeBigModal()" class="w-full py-3 bg-ocean-600 text-white font-bold rounded-2xl text-sm shadow">
+        我知道了 (關閉)
+      </button>
+    </div>
+  </div>
+
+  <!-- Toast 提示氣泡 -->
+  <div id="toast" class="fixed top-14 left-1/2 -translate-x-1/2 z-50 bg-[#2C221E] text-white text-xs px-4 py-2 rounded-full shadow-lg opacity-0 pointer-events-none transition-all duration-300">
+    已複製到剪貼簿！
+  </div>
+
+  <!-- JS 邏輯處理 -->
+  <script>
+    // 初始化 Lucide 圖標
+    lucide.createIcons();
+
+    // 1. Tab 切換邏輯
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-panel').forEach(el => el.classList.add('hidden'));
+      document.getElementById('tab-' + tabId).classList.remove('hidden');
+
+      // 更新底欄圖標狀態
+      document.querySelectorAll('.nav-btn').forEach(btn => {
+        btn.classList.remove('text-ocean-700', 'font-bold');
+        btn.classList.add('text-slate-400', 'font-medium');
+      });
+      const activeBtn = document.getElementById('nav-' + tabId);
+      if (activeBtn) {
+        activeBtn.classList.add('text-ocean-700', 'font-bold');
+        activeBtn.classList.remove('text-slate-400', 'font-medium');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    // 2. 行程手風琴切換
+    function toggleDay(dayKey) {
+      const content = document.getElementById('content-' + dayKey);
+      const arrow = document.getElementById('arrow-' + dayKey);
+      if (content.classList.contains('hidden')) {
+        content.classList.remove('hidden');
+        arrow.classList.add('rotate-180');
+      } else {
+        content.classList.add('hidden');
+        arrow.classList.remove('rotate-180');
+      }
+    }
+
+    // 3. 地圖地點天數篩選
+    function filterMapPlaces(dayFilter) {
+      const items = document.querySelectorAll('.place-item');
+      items.forEach(item => {
+        if (dayFilter === 'all' || item.dataset.day === dayFilter) {
+          item.classList.remove('hidden');
+        } else {
+          item.classList.add('hidden');
         }
+      });
 
-        // 嘗試初始化 Firebase
+      // 更新按鈕樣式
+      document.querySelectorAll('.map-filter-btn').forEach(btn => {
+        if (btn.dataset.filter === dayFilter) {
+          btn.classList.add('bg-ocean-600', 'text-white', 'font-bold');
+          btn.classList.remove('bg-slate-100', 'text-slate-600', 'font-medium');
+        } else {
+          btn.classList.remove('bg-ocean-600', 'text-white', 'font-bold');
+          btn.classList.add('bg-slate-100', 'text-slate-600', 'font-medium');
+        }
+      });
+    }
+
+    // Naver Map 外連跳轉
+    function openNaver(keyword) {
+      window.open('https://map.naver.com/v5/search/' + encodeURIComponent(keyword), '_blank');
+    }
+
+    // 4. 出發倒數計時器 (Target: 2026-12-04 12:15:00)
+    function updateCountdown() {
+      const target = new Date('2026-12-04T12:15:00+08:00');
+      const now = new Date();
+      const diff = target - now;
+      const el = document.getElementById('headerCountdown');
+      if (diff > 0) {
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        el.innerText = '倒數 ' + days + ' 天';
+      } else {
+        el.innerText = '釜山旅行中 🎉';
+      }
+    }
+    updateCountdown();
+
+    // 5. 複製文字剪貼簿
+    function copyText(str) {
+      const el = document.createElement('textarea');
+      el.value = str;
+      document.body.appendChild(el);
+      el.select();
+      document.execCommand('copy');
+      document.body.removeChild(el);
+
+      const toast = document.getElementById('toast');
+      toast.innerText = '已複製：' + str;
+      toast.classList.remove('opacity-0');
+      setTimeout(() => toast.classList.add('opacity-0'), 2000);
+    }
+
+    // 6. 匯率計算機邏輯
+    function calculateExchange(from) {
+      const rate = parseFloat(document.getElementById('rateInput').value) || 41.5;
+      const krwVal = parseFloat(document.getElementById('krwInput').value) || 0;
+      const twd = Math.round(krwVal / rate);
+      document.getElementById('twdResult').innerText = 'NT$ ' + twd.toLocaleString();
+    }
+    function setKrw(val) {
+      document.getElementById('krwInput').value = val;
+      calculateExchange('krw');
+    }
+
+    // 7. 記帳功能 (含 LocalStorage 永續保存)
+    let expenses = [];
+    try {
+      expenses = JSON.parse(localStorage.getItem('busan_expenses_2026') || '[]');
+    } catch(e) { expenses = []; }
+
+    // 初始化預設值範例
+    if (expenses.length === 0) {
+      expenses = [
+        { id: 1, cat: '🍽️ 美食', desc: '味贊王代烤豬五花+大醬湯', krw: 52000, date: '12/04' },
+        { id: 2, cat: '🥞 點心', desc: 'BIFF 廣場堅果黑糖餅 2份', krw: 4000, date: '12/05' }
+      ];
+      saveExpenses();
+    }
+
+    function renderExpenses() {
+      const list = document.getElementById('expenseList');
+      list.innerHTML = '';
+      let sumKrw = 0;
+      const rate = parseFloat(document.getElementById('rateInput').value) || 41.5;
+
+      expenses.forEach((item, index) => {
+        sumKrw += item.krw;
+        const twd = Math.round(item.krw / rate);
+        const div = document.createElement('div');
+        div.className = 'p-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between';
+        div.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="text-sm">${item.cat.split(' ')[0]}</span>
+            <div>
+              <div class="font-bold text-slate-800">${item.desc}</div>
+              <div class="text-[10px] text-slate-400">${item.date || '12月'}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="text-right">
+              <div class="font-mono font-bold text-slate-900">₩${item.krw.toLocaleString()}</div>
+              <div class="text-[10px] text-slate-400 font-mono">≈NT$${twd}</div>
+            </div>
+            <button onclick="deleteExpense(${index})" class="text-slate-300 hover:text-red-500 p-1">✕</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+
+      document.getElementById('totalKrw').innerText = '₩' + sumKrw.toLocaleString();
+      document.getElementById('totalTwd').innerText = '≈ NT$ ' + Math.round(sumKrw / rate).toLocaleString();
+      document.getElementById('expenseCount').innerText = expenses.length + ' 筆記錄';
+    }
+
+    function addExpense() {
+      const cat = document.getElementById('expCategory').value;
+      const desc = document.getElementById('expDesc').value.trim();
+      const amount = parseInt(document.getElementById('expAmount').value);
+
+      if (!desc || isNaN(amount) || amount <= 0) {
+        alert('請填寫完整項目品名與有效金額！');
+        return;
+      }
+
+      expenses.unshift({
+        id: Date.now(),
+        cat: cat,
+        desc: desc,
+        krw: amount,
+        date: '12/04'
+      });
+
+      saveExpenses();
+      document.getElementById('expDesc').value = '';
+      document.getElementById('expAmount').value = '';
+      renderExpenses();
+    }
+
+    function deleteExpense(idx) {
+      expenses.splice(idx, 1);
+      saveExpenses();
+      renderExpenses();
+    }
+
+    function clearAllExpenses() {
+      if (confirm('確定要清空所有記帳記錄嗎？')) {
+        expenses = [];
+        saveExpenses();
+        renderExpenses();
+      }
+    }
+
+    function saveExpenses() {
+      localStorage.setItem('busan_expenses_2026', JSON.stringify(expenses));
+    }
+    renderExpenses();
+
+    // 8. 韓語求助彈窗
+    function showBigModal(kor, sub) {
+      document.getElementById('modalKor').innerText = kor;
+      document.getElementById('modalSub').innerText = sub;
+      document.getElementById('bigModal').classList.remove('hidden');
+    }
+    function closeBigModal() {
+      document.getElementById('bigModal').classList.add('hidden');
+    }
+
+    // 9. 海浪白噪音音效 (Web Audio API)
+    let audioCtx = null;
+    let waveNoiseNode = null;
+    let waveGain = null;
+    let isPlayingWave = false;
+    let waveInterval = null;
+
+    function toggleWaveSound() {
+      const icon = document.getElementById('waveIcon');
+      if (!isPlayingWave) {
         try {
-            let firebaseConfig = {};
-            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
-                firebaseConfig = JSON.parse(__firebase_config);
+          if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          }
+          if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+          }
+          const bufferSize = 2 * audioCtx.sampleRate;
+          const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+          const output = noiseBuffer.getChannelData(0);
+          for (let i = 0; i < bufferSize; i++) {
+            output[i] = (Math.random() * 2 - 1) * 0.4;
+          }
+          const whiteNoise = audioCtx.createBufferSource();
+          whiteNoise.buffer = noiseBuffer;
+          whiteNoise.loop = true;
+
+          const filter = audioCtx.createBiquadFilter();
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(320, audioCtx.currentTime);
+
+          waveGain = audioCtx.createGain();
+          waveGain.gain.setValueAtTime(0.01, audioCtx.currentTime);
+
+          whiteNoise.connect(filter);
+          filter.connect(waveGain);
+          waveGain.connect(audioCtx.destination);
+          whiteNoise.start();
+          waveNoiseNode = whiteNoise;
+
+          let tideIn = true;
+          waveInterval = setInterval(() => {
+            if (!waveGain) return;
+            const now = audioCtx.currentTime;
+            if (tideIn) {
+              waveGain.gain.exponentialRampToValueAtTime(0.2, now + 2.2);
             } else {
-                // ⚠️重要：若您將檔案下載到自己的電腦執行，並希望使用 Google 登入與雲端儲存，
-                // 請到 Firebase 後台建立專案，並將您的 Config 貼在下方解開註解：
-                /*
-                firebaseConfig = {
-                    apiKey: "YOUR_API_KEY",
-                    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-                    projectId: "YOUR_PROJECT_ID",
-                    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-                    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-                    appId: "YOUR_APP_ID"
-                };
-                */
+              waveGain.gain.exponentialRampToValueAtTime(0.02, now + 2.8);
             }
-            
-            if (Object.keys(firebaseConfig).length === 0) {
-                throw new Error("Empty Firebase config");
-            }
-            
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            
-            // 執行登入流程
-            initAuth();
-            
-        } catch (error) {
-            console.warn("無法初始化雲端環境，已切換至單機測試模式:", error);
-            switchToLocalMode();
-        }
+            tideIn = !tideIn;
+          }, 3000);
 
-        function initAuth() {
-            const performAuth = async () => {
-                try {
-                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                        await signInWithCustomToken(auth, __initial_auth_token);
-                    } else {
-                        // 預設先使用匿名登入，讓使用者可先體驗，後續可點擊 Google 登入綁定
-                        await signInAnonymously(auth);
-                    }
-                } catch (error) {
-                    console.error("Authentication failed:", error);
-                    window.showNotification("連線錯誤", "無法連線至雲端系統，已切換為單機模式。", "error");
-                    switchToLocalMode();
-                }
-            };
-            
-            performAuth();
+          isPlayingWave = true;
+          icon.classList.add('text-ocean-600');
+        } catch (e) {}
+      } else {
+        if (waveGain) waveGain.gain.setValueAtTime(0.0001, audioCtx.currentTime);
+        if (waveNoiseNode) { try { waveNoiseNode.stop(); } catch(e){} }
+        clearInterval(waveInterval);
+        isPlayingWave = false;
+        icon.classList.remove('text-ocean-600');
+      }
+    }
 
-            // 監聽登入狀態
-            onAuthStateChanged(auth, (user) => {
-                if (isLocalMode) return;
-                
-                currentUser = user;
-                const statusEl = document.getElementById('syncStatus');
-                const addBtn = document.getElementById('addBtn');
-                const googleLoginBtn = document.getElementById('googleLoginBtn');
-                const userInfo = document.getElementById('userInfo');
-                const userAvatar = document.getElementById('userAvatar');
-                const userName = document.getElementById('userName');
-
-                if (user) {
-                    // UI 更新為已連線
-                    statusEl.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-100 text-blue-700 rounded-full text-xs font-medium';
-                    statusEl.innerHTML = `<i class="ph-fill ph-cloud-check"></i> 已連線`;
-                    addBtn.disabled = false;
-                    
-                    // 判斷是否為 Google 登入 (非匿名)
-                    if (!user.isAnonymous) {
-                        googleLoginBtn.classList.add('hidden');
-                        googleLoginBtn.classList.remove('flex');
-                        userInfo.classList.remove('hidden');
-                        userInfo.classList.add('flex');
-                        userAvatar.src = user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName || 'U');
-                        userName.textContent = user.displayName || '使用者';
-                    } else {
-                        // 匿名模式，顯示 Google 登入按鈕
-                        googleLoginBtn.classList.remove('hidden');
-                        googleLoginBtn.classList.add('flex');
-                        userInfo.classList.add('hidden');
-                        userInfo.classList.remove('flex');
-                    }
-                    
-                    // 重新啟動資料庫監聽 (不同帳號/匿名會有不同的 uid)
-                    if (unsubscribeSnapshot) unsubscribeSnapshot();
-                    setupFirestoreListener(user.uid);
-                } else {
-                    switchToLocalMode();
-                }
-            });
-        }
-
-        // Google 登入功能
-        window.loginWithGoogle = async function() {
-            if (!auth) return;
-            const provider = new GoogleAuthProvider();
-            try {
-                const result = await signInWithPopup(auth, provider);
-                window.showNotification("登入成功", `歡迎回來，${result.user.displayName}！`, "success");
-            } catch (error) {
-                console.error("Google 登入失敗:", error);
-                if (error.code !== 'auth/popup-closed-by-user') {
-                    window.showNotification("登入失敗", error.message, "error");
-                }
-            }
-        };
-
-        // 登出功能
-        window.logout = async function() {
-            if (!auth) return;
-            try {
-                if (unsubscribeSnapshot) {
-                    unsubscribeSnapshot();
-                    unsubscribeSnapshot = null;
-                }
-                watchList = [];
-                renderTable(); // 清空畫面
-                await signOut(auth);
-                window.showNotification("已登出", "您已成功登出", "info");
-                // 登出後退回匿名登入模式
-                await signInAnonymously(auth);
-            } catch (error) {
-                console.error("登出失敗:", error);
-                window.showNotification("登出失敗", "請稍後再試", "error");
-            }
-        };
-
-        // 建立雲端資料庫監聽
-        function setupFirestoreListener(userId) {
-            if (isLocalMode) return;
-            const watchListRef = collection(db, 'artifacts', appId, 'users', userId, 'watchlist');
-            
-            unsubscribeSnapshot = onSnapshot(watchListRef, (snapshot) => {
-                watchList = [];
-                snapshot.forEach(docSnap => {
-                    const data = docSnap.data();
-                    watchList.push(data);
-                    
-                    if (!localStockData[data.symbol]) {
-                        const mockInitialPrice = +(data.targetPrice * (0.9 + Math.random() * 0.2)).toFixed(2);
-                        localStockData[data.symbol] = {
-                            currentPrice: mockInitialPrice,
-                            previousPrice: mockInitialPrice,
-                            notified: false
-                        };
-                    }
-                });
-                renderTable();
-            }, (error) => {
-                console.error("Error fetching watchlist:", error);
-                window.showNotification("讀取失敗", "無法同步雲端資料，請檢查網路連線。", "error");
-            });
-        }
-
-        // 1. 新增股票
-        window.addStock = async function() {
-            const symbolInput = document.getElementById('stockSymbol');
-            const targetInput = document.getElementById('targetPrice');
-            
-            const symbol = symbolInput.value.trim().toUpperCase();
-            const targetPrice = parseFloat(targetInput.value);
-
-            if (!symbol || isNaN(targetPrice) || targetPrice <= 0) {
-                window.showNotification("輸入錯誤", "請輸入正確的股票代號或名稱，與大於 0 的目標價位！", "error");
-                return;
-            }
-
-            if (watchList.some(stock => stock.symbol === symbol)) {
-                window.showNotification("重複加入", "這檔股票已經在您的追蹤清單中了！", "info");
-                return;
-            }
-
-            if (isLocalMode) {
-                // 單機模式處理：存入記憶體
-                watchList.push({
-                    symbol: symbol,
-                    targetPrice: targetPrice,
-                    addedAt: new Date().toISOString()
-                });
-                
-                const mockInitialPrice = +(targetPrice * (0.9 + Math.random() * 0.2)).toFixed(2);
-                localStockData[symbol] = {
-                    currentPrice: mockInitialPrice,
-                    previousPrice: mockInitialPrice,
-                    notified: false
-                };
-                
-                renderTable();
-                symbolInput.value = '';
-                targetInput.value = '';
-                symbolInput.focus();
-                return;
-            }
-
-            // 雲端模式處理：寫入 Firestore
-            if (!currentUser) return;
-            
-            const stockData = {
-                symbol: symbol,
-                targetPrice: targetPrice,
-                addedAt: new Date().toISOString()
-            };
-
-            try {
-                document.getElementById('addBtn').disabled = true;
-                const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'watchlist', symbol);
-                await setDoc(docRef, stockData);
-                
-                symbolInput.value = '';
-                targetInput.value = '';
-                symbolInput.focus();
-            } catch (error) {
-                console.error("Error adding document: ", error);
-                window.showNotification("儲存失敗", "無法加入清單，請稍後重試。", "error");
-            } finally {
-                document.getElementById('addBtn').disabled = false;
-            }
-        };
-
-        // 2. 刪除股票
-        window.removeStock = async function(symbol) {
-            if (isLocalMode) {
-                // 單機模式處理：刪除記憶體資料
-                watchList = watchList.filter(s => s.symbol !== symbol);
-                delete localStockData[symbol];
-                renderTable();
-                return;
-            }
-
-            // 雲端模式處理
-            if (!currentUser) return;
-            try {
-                const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'watchlist', symbol);
-                await deleteDoc(docRef);
-                delete localStockData[symbol];
-            } catch (error) {
-                console.error("Error removing document: ", error);
-                window.showNotification("刪除失敗", "無法移除該項目，請稍後重試。", "error");
-            }
-        };
-
-        // 3. 渲染表格
-        function renderTable() {
-            const tbody = document.getElementById('stockList');
-            
-            // 處理空狀態
-            if (watchList.length === 0) {
-                const msg = isLocalMode ? "清單目前是空的，請在上方新增！" : "雲端清單目前是空的，請在上方新增！";
-                const icon = isLocalMode ? "ph-list-magnifying-glass" : "ph-cloud-arrow-up";
-                
-                tbody.innerHTML = `
-                    <tr id="emptyState" class="block md:table-row bg-white md:bg-transparent rounded-xl border border-slate-200 md:border-none shadow-sm md:shadow-none">
-                        <td colspan="5" class="block md:table-cell px-6 py-12 text-center text-slate-400">
-                            <div class="flex flex-col items-center gap-2">
-                                <i class="ph ${icon} text-4xl text-slate-300"></i>
-                                <p>${msg}</p>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-                return;
-            }
-
-            tbody.innerHTML = '';
-
-            // 將資料結合 本地模擬資料 進行渲染
-            watchList.forEach(stockData => {
-                const symbol = stockData.symbol;
-                const targetPrice = stockData.targetPrice;
-                const localData = localStockData[symbol];
-
-                if (!localData) return;
-
-                const tr = document.createElement('tr');
-                tr.id = `row-${symbol}`;
-                tr.className = 'block md:table-row bg-white md:bg-transparent border border-slate-200 md:border-none rounded-xl md:rounded-none shadow-sm md:shadow-none hover:bg-slate-50/80 transition-colors group overflow-hidden relative';
-                
-                const isReached = localData.currentPrice >= targetPrice;
-                
-                // 判斷漲跌顏色
-                let priceColorClass = 'text-slate-600';
-                let arrowIcon = '';
-                if (localData.currentPrice > localData.previousPrice) {
-                    priceColorClass = 'text-red-500 font-medium';
-                    arrowIcon = '<i class="ph-bold ph-caret-up text-xs mr-1"></i>';
-                } else if (localData.currentPrice < localData.previousPrice) {
-                    priceColorClass = 'text-green-500 font-medium';
-                    arrowIcon = '<i class="ph-bold ph-caret-down text-xs mr-1"></i>';
-                }
-
-                const statusBadge = isReached 
-                    ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
-                        <i class="ph-fill ph-bell-ringing"></i> 已達標
-                       </span>`
-                    : `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-600 border border-slate-200 md:border-transparent">
-                        <i class="ph ph-eyes"></i> 追蹤中
-                       </span>`;
-
-                tr.innerHTML = `
-                    <td class="flex md:table-cell justify-between items-center px-4 md:px-6 py-3 md:py-4 font-bold text-slate-800 border-b border-slate-100 md:border-none bg-slate-50 md:bg-transparent">
-                        <span class="md:hidden text-slate-500 font-normal text-sm">代號 / 名稱</span>
-                        <span class="text-lg md:text-base">${symbol}</span>
-                    </td>
-                    <td class="flex md:table-cell justify-between items-center px-4 md:px-6 py-3 md:py-4 text-right text-slate-600 border-b border-slate-100 md:border-none">
-                        <span class="md:hidden text-slate-500 font-normal text-sm">目標價</span>
-                        <span>${targetPrice.toFixed(2)}</span>
-                    </td>
-                    <td class="flex md:table-cell justify-between items-center px-4 md:px-6 py-3 md:py-4 text-right ${priceColorClass} border-b border-slate-100 md:border-none" id="price-${symbol}">
-                        <span class="md:hidden text-slate-500 font-normal text-sm">目前價位</span>
-                        <div class="flex items-center justify-end text-lg md:text-base">
-                            ${arrowIcon}
-                            ${localData.currentPrice.toFixed(2)}
-                        </div>
-                    </td>
-                    <td class="flex md:table-cell justify-between items-center px-4 md:px-6 py-3 md:py-4 text-center border-b border-slate-100 md:border-none">
-                        <span class="md:hidden text-slate-500 font-normal text-sm">狀態</span>
-                        ${statusBadge}
-                    </td>
-                    <td class="flex md:table-cell justify-between md:justify-center items-center px-4 md:px-6 py-3 md:py-4 text-center bg-slate-50/50 md:bg-transparent">
-                        <span class="md:hidden text-slate-500 font-normal text-sm">操作</span>
-                        <button onclick="window.removeStock('${symbol}')" 
-                            class="p-2 md:p-2 px-4 py-1.5 md:px-2 md:py-2 text-slate-500 md:text-slate-400 hover:text-red-500 hover:bg-red-100 md:hover:bg-red-50 bg-white md:bg-transparent border border-slate-200 md:border-transparent rounded-lg transition-colors flex items-center gap-1.5" title="刪除">
-                            <i class="ph ph-trash text-lg md:text-lg"></i>
-                            <span class="md:hidden text-sm font-medium">刪除</span>
-                        </button>
-                    </td>
-                `;
-                
-                if (isReached) {
-                    tr.classList.add('md:bg-amber-50/30', 'border-amber-200');
-                }
-
-                tbody.appendChild(tr);
-            });
-        }
-
-        // 4. 模擬目前價位更新與到價通知
-        setInterval(() => {
-            if (watchList.length === 0) return;
-
-            let needsRender = false;
-
-            watchList.forEach(stockData => {
-                const symbol = stockData.symbol;
-                const targetPrice = stockData.targetPrice;
-                const localData = localStockData[symbol];
-                
-                if (!localData) return;
-
-                // 模擬股價波動
-                if (Math.random() > 0.7) {
-                    localData.previousPrice = localData.currentPrice;
-                    const changePercent = 1 + ((Math.random() - 0.5) * 0.03);
-                    localData.currentPrice = +(localData.currentPrice * changePercent).toFixed(2);
-                    needsRender = true;
-
-                    // 閃爍動畫
-                    const rowElement = document.getElementById(`row-${symbol}`);
-                    if(rowElement) {
-                        const priceCell = document.getElementById(`price-${symbol}`);
-                        if(localData.currentPrice > localData.previousPrice) {
-                            priceCell.classList.remove('flash-up', 'flash-down');
-                            void priceCell.offsetWidth; 
-                            priceCell.classList.add('flash-up');
-                        } else if (localData.currentPrice < localData.previousPrice) {
-                            priceCell.classList.remove('flash-up', 'flash-down');
-                            void priceCell.offsetWidth; 
-                            priceCell.classList.add('flash-down');
-                        }
-                    }
-
-                    // 檢查是否到價
-                    if (localData.currentPrice >= targetPrice && !localData.notified) {
-                        window.showNotification("到價通知", `<span class="font-bold">${symbol}</span> 已達目標價 ${targetPrice}！目前：<span class="text-red-500 font-bold">${localData.currentPrice.toFixed(2)}</span>`, "success");
-                        localData.notified = true;
-                    } 
-                    else if (localData.currentPrice < targetPrice && localData.notified) {
-                        localData.notified = false;
-                    }
-                }
-            });
-
-            if (needsRender) {
-                renderTable();
-            }
-
-        }, 2000); 
-    </script>
+    // 10. 飄雪星芒開關
+    let snowActive = true;
+    function toggleSnow() {
+      const layer = document.getElementById('particle-layer');
+      snowActive = !snowActive;
+      layer.style.display = snowActive ? 'block' : 'none';
+    }
+  </script>
 </body>
 </html>
