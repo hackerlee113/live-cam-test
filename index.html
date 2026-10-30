@@ -1434,6 +1434,204 @@
     已複製到剪貼簿！
   </div>
 
+  <!-- Firebase 雲端共用模組 -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // 1. 初始化 Firebase 環境
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'busan-handbook-2026-default';
+    let firebaseConfig = {};
+    try {
+      if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config);
+    } catch (e) { console.error("Firebase config 錯誤", e); }
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // 2. 雲端認證與連線
+    let currentUser = null;
+    let cloudExpenses = [];
+    let cloudShopping = [];
+
+    async function initCloudSync() {
+      try {
+        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+          const userCredential = await signInWithCustomToken(auth, __initial_auth_token);
+          currentUser = userCredential.user;
+        } else {
+          const userCredential = await signInAnonymously(auth);
+          currentUser = userCredential.user;
+        }
+        
+        showCustomToast('☁️ 雲端同步已連線，支援多人共用！');
+        setupRealtimeListeners();
+      } catch (error) {
+        console.error("Auth error:", error);
+        showCustomToast('⚠️ 雲端連線失敗，請檢查網路');
+      }
+    }
+
+    // 3. 設定即時資料監聽器 (Real-time Sync)
+    function setupRealtimeListeners() {
+      if (!currentUser) return;
+
+      // 記帳監聽
+      const expRef = collection(db, 'artifacts', appId, 'public', 'data', 'expenses');
+      onSnapshot(expRef, (snapshot) => {
+        cloudExpenses = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        cloudExpenses.sort((a, b) => b.createdAt - a.createdAt); // 依時間新到舊排序
+        renderCloudExpenses();
+      }, (err) => console.error(err));
+
+      // 購物清單監聽
+      const shopRef = collection(db, 'artifacts', appId, 'public', 'data', 'shopping');
+      onSnapshot(shopRef, (snapshot) => {
+        cloudShopping = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        cloudShopping.sort((a, b) => b.createdAt - a.createdAt);
+        renderCloudShopping();
+      }, (err) => console.error(err));
+    }
+
+    // --- 記帳功能 (雲端版) ---
+    function renderCloudExpenses() {
+      const list = document.getElementById('expenseList');
+      list.innerHTML = '';
+      let sumKrw = 0;
+      const rate = parseFloat(document.getElementById('rateInput').value) || 41.5;
+
+      cloudExpenses.forEach((item) => {
+        sumKrw += item.krw;
+        const twd = Math.round(item.krw / rate);
+        const div = document.createElement('div');
+        div.className = 'p-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between';
+        div.innerHTML = `
+          <div class="flex items-center gap-2">
+            <span class="text-sm">${item.cat.split(' ')[0]}</span>
+            <div>
+              <div class="font-bold text-slate-800">${item.desc}</div>
+              <div class="text-[10px] text-slate-400">${item.date || '12月'}</div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <div class="text-right">
+              <div class="font-mono font-bold text-slate-900">₩${item.krw.toLocaleString()}</div>
+              <div class="text-[10px] text-slate-400 font-mono">≈NT$${twd}</div>
+            </div>
+            <button onclick="deleteCloudExpense('${item.id}')" class="text-slate-300 hover:text-red-500 p-1">✕</button>
+          </div>
+        `;
+        list.appendChild(div);
+      });
+
+      document.getElementById('totalKrw').innerText = '₩' + sumKrw.toLocaleString();
+      document.getElementById('totalTwd').innerText = '≈ NT$ ' + Math.round(sumKrw / rate).toLocaleString();
+      document.getElementById('expenseCount').innerText = cloudExpenses.length + ' 筆記錄';
+    }
+
+    window.addExpense = async function() {
+      if (!currentUser) return showCustomToast('請等待雲端連線...');
+      const cat = document.getElementById('expCategory').value;
+      const desc = document.getElementById('expDesc').value.trim();
+      const amount = parseInt(document.getElementById('expAmount').value);
+
+      if (!desc || isNaN(amount) || amount <= 0) {
+        showCustomToast('請填寫完整項目品名與有效金額！');
+        return;
+      }
+
+      try {
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'expenses'), {
+          cat, desc, krw: amount, date: '12/04', createdAt: Date.now(), author: currentUser.uid
+        });
+        document.getElementById('expDesc').value = '';
+        document.getElementById('expAmount').value = '';
+      } catch(e) { console.error(e); }
+    };
+
+    window.deleteCloudExpense = async function(docId) {
+      if (!currentUser) return;
+      try {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'expenses', docId));
+      } catch(e) { console.error(e); }
+    };
+
+    window.clearAllExpenses = function() {
+      showCustomToast('為保護共用資料，暫不開放一鍵清空功能，請單筆刪除');
+    };
+
+    // --- 購物清單 (雲端版) ---
+    function renderCloudShopping() {
+      const container = document.getElementById('shoppingListContainer');
+      container.innerHTML = '';
+      let boughtCount = 0;
+
+      cloudShopping.forEach((item) => {
+        if(item.bought) boughtCount++;
+        const div = document.createElement('div');
+        div.className = `p-2.5 rounded-xl border flex items-center justify-between transition-all ${
+          item.bought ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white border-rose-100 shadow-sm'
+        }`;
+        
+        div.innerHTML = `
+          <div class="flex items-center gap-3 flex-1 cursor-pointer" onclick="toggleCloudShopping('${item.id}', ${!item.bought})">
+            <div class="w-4 h-4 rounded flex items-center justify-center transition-colors border ${
+              item.bought ? 'shop-check-active' : 'border-slate-300 bg-white'
+            }">
+              ${item.bought ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+            </div>
+            <div>
+              <div class="font-bold text-sm ${item.bought ? 'text-slate-500 line-through' : 'text-slate-800'}">${item.name}</div>
+              <div class="text-[10px] mt-0.5 ${item.bought ? 'text-slate-400' : 'text-rose-600'}">${item.cat}</div>
+            </div>
+          </div>
+          <button onclick="deleteCloudShopping('${item.id}')" class="text-slate-300 hover:text-red-500 p-1.5 ml-2 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+          </button>
+        `;
+        container.appendChild(div);
+      });
+
+      document.getElementById('shoppingProgress').innerText = `${boughtCount}/${cloudShopping.length} 已買`;
+    }
+
+    window.addShoppingItem = async function() {
+      if (!currentUser) return showCustomToast('請等待雲端連線...');
+      const cat = document.getElementById('shopCategory').value;
+      const name = document.getElementById('shopItemName').value.trim();
+      
+      if (!name) return showCustomToast('請填寫物品名稱！');
+      
+      try {
+        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'shopping'), {
+          cat, name, bought: false, createdAt: Date.now()
+        });
+        document.getElementById('shopItemName').value = '';
+      } catch(e) { console.error(e); }
+    };
+
+    window.toggleCloudShopping = async function(docId, newStatus) {
+      if (!currentUser) return;
+      try {
+        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'shopping', docId), {
+          bought: newStatus
+        });
+      } catch(e) { console.error(e); }
+    };
+
+    window.deleteCloudShopping = async function(docId) {
+      if (!currentUser) return;
+      try {
+        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'shopping', docId));
+      } catch(e) { console.error(e); }
+    };
+
+    // 啟動 Firebase 連線
+    initCloudSync();
+  </script>
+
   <!-- JS 邏輯處理 -->
   <script>
     // 初始化 Lucide 圖標
@@ -1525,11 +1723,15 @@
       el.select();
       document.execCommand('copy');
       document.body.removeChild(el);
+      showCustomToast('已複製：' + str);
+    }
 
+    // 浮動提示功能 (取代 alert 與 confirm)
+    function showCustomToast(msg) {
       const toast = document.getElementById('toast');
-      toast.innerText = '已複製：' + str;
+      toast.innerText = msg;
       toast.classList.remove('opacity-0');
-      setTimeout(() => toast.classList.add('opacity-0'), 2000);
+      setTimeout(() => toast.classList.add('opacity-0'), 2500);
     }
 
     // 6. 匯率計算機邏輯
@@ -1544,98 +1746,10 @@
       calculateExchange('krw');
     }
 
-    // 7. 記帳功能 (含 LocalStorage 永續保存)
-    let expenses = [];
-    try {
-      expenses = JSON.parse(localStorage.getItem('busan_expenses_2026') || '[]');
-    } catch(e) { expenses = []; }
-
-    // 初始化預設值範例
-    if (expenses.length === 0) {
-      expenses = [
-        { id: 1, cat: '🍽️ 美食', desc: '味贊王代烤豬五花+大醬湯', krw: 52000, date: '12/04' },
-        { id: 2, cat: '🥞 點心', desc: 'BIFF 廣場堅果黑糖餅 2份', krw: 4000, date: '12/05' }
-      ];
-      saveExpenses();
-    }
-
-    function renderExpenses() {
-      const list = document.getElementById('expenseList');
-      list.innerHTML = '';
-      let sumKrw = 0;
-      const rate = parseFloat(document.getElementById('rateInput').value) || 41.5;
-
-      expenses.forEach((item, index) => {
-        sumKrw += item.krw;
-        const twd = Math.round(item.krw / rate);
-        const div = document.createElement('div');
-        div.className = 'p-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between';
-        div.innerHTML = `
-          <div class="flex items-center gap-2">
-            <span class="text-sm">${item.cat.split(' ')[0]}</span>
-            <div>
-              <div class="font-bold text-slate-800">${item.desc}</div>
-              <div class="text-[10px] text-slate-400">${item.date || '12月'}</div>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="text-right">
-              <div class="font-mono font-bold text-slate-900">₩${item.krw.toLocaleString()}</div>
-              <div class="text-[10px] text-slate-400 font-mono">≈NT$${twd}</div>
-            </div>
-            <button onclick="deleteExpense(${index})" class="text-slate-300 hover:text-red-500 p-1">✕</button>
-          </div>
-        `;
-        list.appendChild(div);
-      });
-
-      document.getElementById('totalKrw').innerText = '₩' + sumKrw.toLocaleString();
-      document.getElementById('totalTwd').innerText = '≈ NT$ ' + Math.round(sumKrw / rate).toLocaleString();
-      document.getElementById('expenseCount').innerText = expenses.length + ' 筆記錄';
-    }
-
-    function addExpense() {
-      const cat = document.getElementById('expCategory').value;
-      const desc = document.getElementById('expDesc').value.trim();
-      const amount = parseInt(document.getElementById('expAmount').value);
-
-      if (!desc || isNaN(amount) || amount <= 0) {
-        alert('請填寫完整項目品名與有效金額！');
-        return;
-      }
-
-      expenses.unshift({
-        id: Date.now(),
-        cat: cat,
-        desc: desc,
-        krw: amount,
-        date: '12/04'
-      });
-
-      saveExpenses();
-      document.getElementById('expDesc').value = '';
-      document.getElementById('expAmount').value = '';
-      renderExpenses();
-    }
-
-    function deleteExpense(idx) {
-      expenses.splice(idx, 1);
-      saveExpenses();
-      renderExpenses();
-    }
-
-    function clearAllExpenses() {
-      if (confirm('確定要清空所有記帳記錄嗎？')) {
-        expenses = [];
-        saveExpenses();
-        renderExpenses();
-      }
-    }
-
-    function saveExpenses() {
-      localStorage.setItem('busan_expenses_2026', JSON.stringify(expenses));
-    }
-    renderExpenses();
+    // ==========================================
+    // 註：記帳與購物功能已遷移至上方 Firebase 雲端模組
+    // (移除了舊版的 localStorage 本地儲存邏輯)
+    // ==========================================
 
     // 8. 韓語求助彈窗
     function showBigModal(kor, sub) {
