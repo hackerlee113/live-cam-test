@@ -120,6 +120,13 @@
     /* 隱藏滾動條 */
     .no-scrollbar::-webkit-scrollbar { display: none; }
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+    /* 購物清單打勾樣式 */
+    .shop-check-active {
+      background-color: #f43f5e;
+      border-color: #f43f5e;
+      color: white;
+    }
   </style>
 </head>
 
@@ -327,18 +334,22 @@
         </div>
 
         <!-- 快速功能按鈕 -->
-        <div class="grid grid-cols-3 gap-2 mt-3">
-          <button onclick="switchTab('itinerary')" class="sticker-bounce p-2.5 rounded-2xl bg-milktea-100 border border-milktea-200 text-center">
-            <span class="text-base block">🗓️</span>
-            <span class="text-xs font-bold text-milktea-800">4日散步行程</span>
+        <div class="grid grid-cols-2 gap-2 mt-3">
+          <button onclick="switchTab('itinerary')" class="sticker-bounce p-2.5 rounded-2xl bg-milktea-100 border border-milktea-200 text-center flex items-center justify-center gap-2">
+            <span class="text-lg block">🗓️</span>
+            <span class="text-sm font-bold text-milktea-800">4日行程</span>
           </button>
-          <button onclick="switchTab('map')" class="sticker-bounce p-2.5 rounded-2xl bg-ocean-50 border border-ocean-200 text-center">
-            <span class="text-base block">🗺️</span>
-            <span class="text-xs font-bold text-ocean-800">美食地圖導航</span>
+          <button onclick="switchTab('map')" class="sticker-bounce p-2.5 rounded-2xl bg-ocean-50 border border-ocean-200 text-center flex items-center justify-center gap-2">
+            <span class="text-lg block">🗺️</span>
+            <span class="text-sm font-bold text-ocean-800">美食地圖</span>
           </button>
-          <button onclick="switchTab('tips')" class="sticker-bounce p-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-center">
-            <span class="text-base block">💡</span>
-            <span class="text-xs font-bold text-amber-800">貼心提醒錦囊</span>
+          <button onclick="switchTab('shopping')" class="sticker-bounce p-2.5 rounded-2xl bg-rose-50 border border-rose-200 text-center flex items-center justify-center gap-2">
+            <span class="text-lg block">🛍️</span>
+            <span class="text-sm font-bold text-rose-800">購物清單</span>
+          </button>
+          <button onclick="switchTab('tips')" class="sticker-bounce p-2.5 rounded-2xl bg-amber-50 border border-amber-200 text-center flex items-center justify-center gap-2">
+            <span class="text-lg block">💡</span>
+            <span class="text-sm font-bold text-amber-800">求助錦囊</span>
           </button>
         </div>
 
@@ -1332,34 +1343,77 @@
 
     </section>
 
+    <!-- ==========================================
+         TAB 8: 購物清單 (SHOPPING LIST) - 新增功能
+         ========================================== -->
+    <section id="tab-shopping" class="tab-panel hidden space-y-3">
+      <div class="hand-card p-4 border border-milktea-200">
+        <!-- Title -->
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-bold text-slate-900 flex items-center gap-1.5">
+            <i data-lucide="shopping-bag" class="w-4 h-4 text-rose-500"></i>
+            必買戰利品清單
+          </h2>
+          <span class="text-[10px] px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 font-bold" id="shoppingProgress">0/0 已買</span>
+        </div>
+
+        <!-- Input Form -->
+        <div class="p-3 bg-slate-50 rounded-2xl border border-slate-200 mb-3 space-y-2 text-xs">
+          <div class="flex gap-2">
+            <select id="shopCategory" class="px-2 py-1.5 bg-white border border-slate-200 rounded-xl font-bold text-slate-700">
+              <option value="💄 Olive Young">💄 Olive Young</option>
+              <option value="🍪 樂天/超商">🍪 樂天/超商</option>
+              <option value="👗 地下街服飾">👗 地下街服飾</option>
+              <option value="🎁 其他伴手禮">🎁 其他伴手禮</option>
+            </select>
+          </div>
+          <div class="flex gap-2">
+            <input id="shopItemName" type="text" placeholder="想買的物品 (如: Torriden精華)" class="flex-1 px-3 py-1.5 bg-white border border-slate-200 rounded-xl outline-none">
+            <button onclick="addShoppingItem()" class="px-4 py-1.5 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl shadow-xs transition">
+              加入
+            </button>
+          </div>
+        </div>
+
+        <!-- List View -->
+        <div id="shoppingListContainer" class="space-y-2 max-h-[350px] overflow-y-auto no-scrollbar text-xs">
+          <!-- 項目透過 JS 動態渲染 -->
+        </div>
+      </div>
+    </section>
+
   </main>
 
-  <!-- ==================== 底部固定 APP 導航欄 (6 大功能切換) ==================== -->
+  <!-- ==================== 底部固定 APP 導航欄 (7 大核心功能) ==================== -->
   <nav class="fixed bottom-0 left-0 right-0 z-40 bg-[#FFFDF9]/95 backdrop-blur border-t border-milktea-200 shadow-lg">
-    <div class="max-w-[440px] mx-auto grid grid-cols-6 py-2 px-1">
+    <div class="max-w-[440px] mx-auto grid grid-cols-[repeat(7,minmax(0,1fr))] py-2 px-1">
       <button onclick="switchTab('cover')" id="nav-cover" class="nav-btn flex flex-col items-center justify-center text-ocean-700 font-bold transition">
         <i data-lucide="book-heart" class="w-4 h-4"></i>
-        <span class="text-[9px] mt-1">手帳封面</span>
+        <span class="text-[9px] mt-1 scale-90">首頁</span>
       </button>
       <button onclick="switchTab('itinerary')" id="nav-itinerary" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
         <i data-lucide="calendar" class="w-4 h-4"></i>
-        <span class="text-[9px] mt-1">每日行程</span>
+        <span class="text-[9px] mt-1 scale-90">行程</span>
       </button>
       <button onclick="switchTab('map')" id="nav-map" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
         <i data-lucide="map" class="w-4 h-4"></i>
-        <span class="text-[9px] mt-1">地圖導航</span>
+        <span class="text-[9px] mt-1 scale-90">地圖</span>
+      </button>
+      <button onclick="switchTab('shopping')" id="nav-shopping" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
+        <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+        <span class="text-[9px] mt-1 scale-90">購物</span>
       </button>
       <button onclick="switchTab('weather')" id="nav-weather" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
         <i data-lucide="sun-snow" class="w-4 h-4"></i>
-        <span class="text-[9px] mt-1">天氣穿搭</span>
+        <span class="text-[9px] mt-1 scale-90">天氣</span>
       </button>
       <button onclick="switchTab('calc')" id="nav-calc" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
         <i data-lucide="calculator" class="w-4 h-4"></i>
-        <span class="text-[9px] mt-1">即時換匯</span>
+        <span class="text-[9px] mt-1 scale-90">換匯</span>
       </button>
       <button onclick="switchTab('expense')" id="nav-expense" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
         <i data-lucide="wallet" class="w-4 h-4"></i>
-        <span class="text-[9px] mt-1">旅行記帳</span>
+        <span class="text-[9px] mt-1 scale-90">記帳</span>
       </button>
     </div>
   </nav>
@@ -1392,13 +1446,17 @@
 
       // 更新底欄圖標狀態
       document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('text-ocean-700', 'font-bold');
+        btn.classList.remove('text-ocean-700', 'text-rose-600', 'font-bold');
         btn.classList.add('text-slate-400', 'font-medium');
       });
       const activeBtn = document.getElementById('nav-' + tabId);
       if (activeBtn) {
-        activeBtn.classList.add('text-ocean-700', 'font-bold');
         activeBtn.classList.remove('text-slate-400', 'font-medium');
+        if (tabId === 'shopping') {
+          activeBtn.classList.add('text-rose-600', 'font-bold'); // 購物清單專屬色
+        } else {
+          activeBtn.classList.add('text-ocean-700', 'font-bold');
+        }
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -1589,7 +1647,87 @@
       document.getElementById('bigModal').classList.add('hidden');
     }
 
-    // 9. 海浪白噪音音效 (Web Audio API)
+    // 9. 購物清單功能 (NEW)
+    let shoppingItems = JSON.parse(localStorage.getItem('busan_shopping_2026') || '[]');
+
+    if (shoppingItems.length === 0) {
+      shoppingItems = [
+        { id: 1, cat: '💄 Olive Young', name: 'Torriden 保濕精華', bought: false },
+        { id: 2, cat: '🍪 樂天/超商', name: 'Zero 水果軟糖', bought: true },
+        { id: 3, cat: '🎁 其他伴手禮', name: '釜山海鷗明信片', bought: false }
+      ];
+      saveShoppingItems();
+    }
+
+    function renderShoppingItems() {
+      const container = document.getElementById('shoppingListContainer');
+      container.innerHTML = '';
+      let boughtCount = 0;
+
+      shoppingItems.forEach((item, index) => {
+        if(item.bought) boughtCount++;
+        
+        const div = document.createElement('div');
+        div.className = `p-2.5 rounded-xl border flex items-center justify-between transition-all ${
+          item.bought ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white border-rose-100 shadow-sm'
+        }`;
+        
+        div.innerHTML = `
+          <div class="flex items-center gap-3 flex-1 cursor-pointer" onclick="toggleShoppingItem(${index})">
+            <div class="w-4 h-4 rounded flex items-center justify-center transition-colors border ${
+              item.bought ? 'shop-check-active' : 'border-slate-300 bg-white'
+            }">
+              ${item.bought ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+            </div>
+            <div>
+              <div class="font-bold text-sm ${item.bought ? 'text-slate-500 line-through' : 'text-slate-800'}">${item.name}</div>
+              <div class="text-[10px] mt-0.5 ${item.bought ? 'text-slate-400' : 'text-rose-600'}">${item.cat}</div>
+            </div>
+          </div>
+          <button onclick="deleteShoppingItem(${index})" class="text-slate-300 hover:text-red-500 p-1.5 ml-2 rounded-lg">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+          </button>
+        `;
+        container.appendChild(div);
+      });
+
+      document.getElementById('shoppingProgress').innerText = `${boughtCount}/${shoppingItems.length} 已買`;
+    }
+
+    function addShoppingItem() {
+      const cat = document.getElementById('shopCategory').value;
+      const name = document.getElementById('shopItemName').value.trim();
+      
+      if (!name) {
+        alert('請填寫物品名稱！');
+        return;
+      }
+      
+      shoppingItems.unshift({ id: Date.now(), cat, name, bought: false });
+      saveShoppingItems();
+      
+      document.getElementById('shopItemName').value = '';
+      renderShoppingItems();
+    }
+
+    function toggleShoppingItem(idx) {
+      shoppingItems[idx].bought = !shoppingItems[idx].bought;
+      saveShoppingItems();
+      renderShoppingItems();
+    }
+
+    function deleteShoppingItem(idx) {
+      shoppingItems.splice(idx, 1);
+      saveShoppingItems();
+      renderShoppingItems();
+    }
+
+    function saveShoppingItems() {
+      localStorage.setItem('busan_shopping_2026', JSON.stringify(shoppingItems));
+    }
+    renderShoppingItems();
+
+    // 10. 海浪白噪音音效 (Web Audio API)
     let audioCtx = null;
     let waveNoiseNode = null;
     let waveGain = null;
@@ -1653,7 +1791,7 @@
       }
     }
 
-    // 10. 飄雪星芒開關
+    // 11. 飄雪星芒開關
     let snowActive = true;
     function toggleSnow() {
       const layer = document.getElementById('particle-layer');
