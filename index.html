@@ -153,7 +153,7 @@
   </header>
 
   <!-- APP 主畫面容器 -->
-  <main class="max-w-[440px] mx-auto p-3.5">
+  <main class="max-w-[440px] mx-auto p-3.5 mb-16">
 
     <!-- ==========================================
          TAB 1: 封面與總覽 (COVER & OVERVIEW)
@@ -817,6 +817,23 @@
           整合行程中所有景點、美食與交通站點，支援一鍵開啟 Google Maps 或複製韓文貼入 Naver Map：
         </p>
 
+        <!-- 釜山地鐵旅遊簡易地圖連結卡片 -->
+        <a href="https://share.gemini.google/FGXmp8klTAXi" target="_blank" class="sticker-bounce block mb-4 p-3 bg-gradient-to-r from-sky-50 to-blue-50 border border-blue-100 rounded-2xl shadow-sm hover:shadow relative overflow-hidden">
+          <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-blue-100 rounded-full opacity-60 pointer-events-none"></div>
+          <div class="flex items-center gap-3 relative z-10">
+            <div class="w-9 h-9 rounded-full bg-blue-600 text-white flex items-center justify-center shadow-sm shrink-0">
+              <i data-lucide="train-front" class="w-4 h-4"></i>
+            </div>
+            <div class="flex-1">
+              <div class="font-bold text-slate-800 text-sm">釜山地鐵旅遊簡易地圖</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">點擊查看 / 下載中文版地鐵路線圖</div>
+            </div>
+            <div class="w-7 h-7 rounded-full bg-white flex items-center justify-center text-blue-600 shadow-sm shrink-0">
+              <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            </div>
+          </div>
+        </a>
+
         <!-- 天數快速篩選器 -->
         <div class="flex gap-1.5 overflow-x-auto no-scrollbar pb-2 mb-2">
           <button onclick="filterMapPlaces('all')" class="map-filter-btn px-2.5 py-1 rounded-xl text-xs font-bold bg-ocean-600 text-white shrink-0" data-filter="all">全部地點</button>
@@ -1384,36 +1401,37 @@
 
   </main>
 
-  <!-- ==================== 底部固定 APP 導航欄 (7 大核心功能) ==================== -->
-  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-[#FFFDF9]/95 backdrop-blur border-t border-milktea-200 shadow-lg">
-    <div class="max-w-[440px] mx-auto grid grid-cols-[repeat(7,minmax(0,1fr))] py-2 px-1">
-      <button onclick="switchTab('cover')" id="nav-cover" class="nav-btn flex flex-col items-center justify-center text-ocean-700 font-bold transition">
-        <i data-lucide="book-heart" class="w-4 h-4"></i>
-        <span class="text-[9px] mt-1 scale-90">首頁</span>
+  <!-- ==================== 底部固定 APP 導航欄 (統一風格與美化) ==================== -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-[#FFFDF9]/95 backdrop-blur-md border-t border-milktea-200 shadow-[0_-5px_15px_-5px_rgba(58,124,165,0.15)]">
+    <!-- 加入 pb-[env(safe-area-inset-bottom)] 保障 iPhone 底部安全區，同時放大圖示與字體 -->
+    <div class="max-w-[440px] mx-auto grid grid-cols-7 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] px-1">
+      <button onclick="switchTab('cover')" id="nav-cover" class="nav-btn flex flex-col items-center justify-center text-ocean-800 font-bold transition duration-200 ease-in-out hover:opacity-80">
+        <i data-lucide="book-heart" class="w-[22px] h-[22px] mb-1"></i>
+        <span class="text-[11px] tracking-wide">首頁</span>
       </button>
-      <button onclick="switchTab('itinerary')" id="nav-itinerary" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
-        <i data-lucide="calendar" class="w-4 h-4"></i>
-        <span class="text-[9px] mt-1 scale-90">行程</span>
+      <button onclick="switchTab('itinerary')" id="nav-itinerary" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition duration-200 ease-in-out hover:opacity-80">
+        <i data-lucide="calendar" class="w-[22px] h-[22px] mb-1"></i>
+        <span class="text-[11px] tracking-wide">行程</span>
       </button>
-      <button onclick="switchTab('map')" id="nav-map" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
-        <i data-lucide="map" class="w-4 h-4"></i>
-        <span class="text-[9px] mt-1 scale-90">地圖</span>
+      <button onclick="switchTab('map')" id="nav-map" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition duration-200 ease-in-out hover:opacity-80">
+        <i data-lucide="map" class="w-[22px] h-[22px] mb-1"></i>
+        <span class="text-[11px] tracking-wide">地圖</span>
       </button>
-      <button onclick="switchTab('shopping')" id="nav-shopping" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
-        <i data-lucide="shopping-bag" class="w-4 h-4"></i>
-        <span class="text-[9px] mt-1 scale-90">購物</span>
+      <button onclick="switchTab('shopping')" id="nav-shopping" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition duration-200 ease-in-out hover:opacity-80">
+        <i data-lucide="shopping-bag" class="w-[22px] h-[22px] mb-1"></i>
+        <span class="text-[11px] tracking-wide">購物</span>
       </button>
-      <button onclick="switchTab('weather')" id="nav-weather" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
-        <i data-lucide="sun-snow" class="w-4 h-4"></i>
-        <span class="text-[9px] mt-1 scale-90">天氣</span>
+      <button onclick="switchTab('weather')" id="nav-weather" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition duration-200 ease-in-out hover:opacity-80">
+        <i data-lucide="sun-snow" class="w-[22px] h-[22px] mb-1"></i>
+        <span class="text-[11px] tracking-wide">天氣</span>
       </button>
-      <button onclick="switchTab('calc')" id="nav-calc" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
-        <i data-lucide="calculator" class="w-4 h-4"></i>
-        <span class="text-[9px] mt-1 scale-90">換匯</span>
+      <button onclick="switchTab('calc')" id="nav-calc" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition duration-200 ease-in-out hover:opacity-80">
+        <i data-lucide="calculator" class="w-[22px] h-[22px] mb-1"></i>
+        <span class="text-[11px] tracking-wide">換匯</span>
       </button>
-      <button onclick="switchTab('expense')" id="nav-expense" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition">
-        <i data-lucide="wallet" class="w-4 h-4"></i>
-        <span class="text-[9px] mt-1 scale-90">記帳</span>
+      <button onclick="switchTab('expense')" id="nav-expense" class="nav-btn flex flex-col items-center justify-center text-slate-400 font-medium transition duration-200 ease-in-out hover:opacity-80">
+        <i data-lucide="wallet" class="w-[22px] h-[22px] mb-1"></i>
+        <span class="text-[11px] tracking-wide">記帳</span>
       </button>
     </div>
   </nav>
@@ -1665,24 +1683,20 @@
     // 初始化 Lucide 圖標
     lucide.createIcons();
 
-    // 1. Tab 切換邏輯
+    // 1. Tab 切換邏輯 (統一底欄的點擊與未點擊顏色美學)
     function switchTab(tabId) {
       document.querySelectorAll('.tab-panel').forEach(el => el.classList.add('hidden'));
       document.getElementById('tab-' + tabId).classList.remove('hidden');
 
-      // 更新底欄圖標狀態
+      // 更新底欄圖標狀態 (使用與截圖相近的高級深藍/灰藍配色)
       document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('text-ocean-700', 'text-rose-600', 'font-bold');
+        btn.classList.remove('text-ocean-800', 'font-bold');
         btn.classList.add('text-slate-400', 'font-medium');
       });
       const activeBtn = document.getElementById('nav-' + tabId);
       if (activeBtn) {
         activeBtn.classList.remove('text-slate-400', 'font-medium');
-        if (tabId === 'shopping') {
-          activeBtn.classList.add('text-rose-600', 'font-bold'); // 購物清單專屬色
-        } else {
-          activeBtn.classList.add('text-ocean-700', 'font-bold');
-        }
+        activeBtn.classList.add('text-ocean-800', 'font-bold');
       }
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -1776,7 +1790,6 @@
 
     // ==========================================
     // 註：記帳與購物功能已遷移至上方 Firebase 雲端模組
-    // (移除了舊版的 localStorage 本地儲存邏輯)
     // ==========================================
 
     // 8. 韓語求助彈窗
