@@ -1466,11 +1466,13 @@
           currentUser = userCredential.user;
         }
         
-        showCustomToast('☁️ 雲端同步已連線，支援多人共用！');
+        // 成功取得身份後，顯示 UID 的前四碼讓你知道已經登入
+        const shortUid = currentUser.uid.substring(0, 4);
+        showCustomToast(`☁️ 雲端已連線 (訪客ID: ${shortUid})`);
         setupRealtimeListeners();
       } catch (error) {
         console.error("Auth error:", error);
-        showCustomToast('⚠️ 雲端連線失敗，請檢查網路');
+        showCustomToast(`⚠️ 連線失敗: ${error.message}`);
       }
     }
 
@@ -1482,17 +1484,17 @@
       const expRef = collection(db, 'artifacts', appId, 'public', 'data', 'expenses');
       onSnapshot(expRef, (snapshot) => {
         cloudExpenses = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        cloudExpenses.sort((a, b) => b.createdAt - a.createdAt); // 依時間新到舊排序
+        cloudExpenses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); // 防呆排序避免舊資料缺失欄位
         renderCloudExpenses();
-      }, (err) => console.error(err));
+      }, (err) => console.error("Expenses listen error:", err));
 
       // 購物清單監聽
       const shopRef = collection(db, 'artifacts', appId, 'public', 'data', 'shopping');
       onSnapshot(shopRef, (snapshot) => {
         cloudShopping = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        cloudShopping.sort((a, b) => b.createdAt - a.createdAt);
+        cloudShopping.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); // 防呆排序
         renderCloudShopping();
-      }, (err) => console.error(err));
+      }, (err) => console.error("Shopping listen error:", err));
     }
 
     // --- 記帳功能 (雲端版) ---
@@ -1503,21 +1505,26 @@
       const rate = parseFloat(document.getElementById('rateInput').value) || 41.5;
 
       cloudExpenses.forEach((item) => {
-        sumKrw += item.krw;
-        const twd = Math.round(item.krw / rate);
+        const amt = item.krw || 0;
+        sumKrw += amt;
+        const twd = Math.round(amt / rate);
+        const catLabel = item.cat ? item.cat.split(' ')[0] : '🛒';
+        const descLabel = item.desc || '未命名項目';
+        const dateLabel = item.date || '12/04';
+
         const div = document.createElement('div');
         div.className = 'p-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between';
         div.innerHTML = `
           <div class="flex items-center gap-2">
-            <span class="text-sm">${item.cat.split(' ')[0]}</span>
+            <span class="text-sm">${catLabel}</span>
             <div>
-              <div class="font-bold text-slate-800">${item.desc}</div>
-              <div class="text-[10px] text-slate-400">${item.date || '12月'}</div>
+              <div class="font-bold text-slate-800">${descLabel}</div>
+              <div class="text-[10px] text-slate-400">${dateLabel}</div>
             </div>
           </div>
           <div class="flex items-center gap-2">
             <div class="text-right">
-              <div class="font-mono font-bold text-slate-900">₩${item.krw.toLocaleString()}</div>
+              <div class="font-mono font-bold text-slate-900">₩${amt.toLocaleString()}</div>
               <div class="text-[10px] text-slate-400 font-mono">≈NT$${twd}</div>
             </div>
             <button onclick="deleteCloudExpense('${item.id}')" class="text-slate-300 hover:text-red-500 p-1">✕</button>
@@ -1548,14 +1555,20 @@
         });
         document.getElementById('expDesc').value = '';
         document.getElementById('expAmount').value = '';
-      } catch(e) { console.error(e); }
+      } catch(e) { 
+        console.error(e); 
+        showCustomToast('寫入失敗: ' + e.message); // 顯示具體錯誤
+      }
     };
 
     window.deleteCloudExpense = async function(docId) {
       if (!currentUser) return;
       try {
         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'expenses', docId));
-      } catch(e) { console.error(e); }
+      } catch(e) { 
+        console.error(e); 
+        showCustomToast('刪除失敗: ' + e.message);
+      }
     };
 
     window.clearAllExpenses = function() {
@@ -1569,22 +1582,26 @@
       let boughtCount = 0;
 
       cloudShopping.forEach((item) => {
-        if(item.bought) boughtCount++;
+        const isBought = item.bought === true;
+        if(isBought) boughtCount++;
+        const nameLabel = item.name || '未命名';
+        const catLabel = item.cat || '無分類';
+
         const div = document.createElement('div');
         div.className = `p-2.5 rounded-xl border flex items-center justify-between transition-all ${
-          item.bought ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white border-rose-100 shadow-sm'
+          isBought ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white border-rose-100 shadow-sm'
         }`;
         
         div.innerHTML = `
-          <div class="flex items-center gap-3 flex-1 cursor-pointer" onclick="toggleCloudShopping('${item.id}', ${!item.bought})">
+          <div class="flex items-center gap-3 flex-1 cursor-pointer" onclick="toggleCloudShopping('${item.id}', ${!isBought})">
             <div class="w-4 h-4 rounded flex items-center justify-center transition-colors border ${
-              item.bought ? 'shop-check-active' : 'border-slate-300 bg-white'
+              isBought ? 'shop-check-active' : 'border-slate-300 bg-white'
             }">
-              ${item.bought ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+              ${isBought ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
             </div>
             <div>
-              <div class="font-bold text-sm ${item.bought ? 'text-slate-500 line-through' : 'text-slate-800'}">${item.name}</div>
-              <div class="text-[10px] mt-0.5 ${item.bought ? 'text-slate-400' : 'text-rose-600'}">${item.cat}</div>
+              <div class="font-bold text-sm ${isBought ? 'text-slate-500 line-through' : 'text-slate-800'}">${nameLabel}</div>
+              <div class="text-[10px] mt-0.5 ${isBought ? 'text-slate-400' : 'text-rose-600'}">${catLabel}</div>
             </div>
           </div>
           <button onclick="deleteCloudShopping('${item.id}')" class="text-slate-300 hover:text-red-500 p-1.5 ml-2 rounded-lg">
@@ -1609,7 +1626,10 @@
           cat, name, bought: false, createdAt: Date.now()
         });
         document.getElementById('shopItemName').value = '';
-      } catch(e) { console.error(e); }
+      } catch(e) { 
+        console.error(e); 
+        showCustomToast('寫入失敗: ' + e.message);
+      }
     };
 
     window.toggleCloudShopping = async function(docId, newStatus) {
@@ -1618,14 +1638,20 @@
         await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'shopping', docId), {
           bought: newStatus
         });
-      } catch(e) { console.error(e); }
+      } catch(e) { 
+        console.error(e); 
+        showCustomToast('更新失敗: ' + e.message);
+      }
     };
 
     window.deleteCloudShopping = async function(docId) {
       if (!currentUser) return;
       try {
         await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'shopping', docId));
-      } catch(e) { console.error(e); }
+      } catch(e) { 
+        console.error(e); 
+        showCustomToast('刪除失敗: ' + e.message);
+      }
     };
 
     // 啟動 Firebase 連線
