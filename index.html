@@ -1437,225 +1437,227 @@
   <!-- Firebase 雲端共用模組 -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import { getFirestore, collection, addDoc, deleteDoc, doc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // 1. 初始化 Firebase 環境
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'busan-handbook-2026-default';
-    let firebaseConfig = {};
-    try {
-      if (typeof __firebase_config !== 'undefined') firebaseConfig = JSON.parse(__firebase_config);
-    } catch (e) { console.error("Firebase config 錯誤", e); }
+    const appId = 'busan-handbook-2026-default'; // 給這個手帳一個專屬ID
+    
+    // 👇👇👇 請將您從 Firebase 控制台複製的 firebaseConfig 貼在下方 👇👇👇
+    const firebaseConfig = {
+      apiKey: "AIzaSyAvMYKAtjtPTwEb9WgYdqU_iU4EQmC-seg",
+      authDomain: "busan202612-20347.firebaseapp.com",
+      projectId: "busan202612-20347",
+      storageBucket: "busan202612-20347.firebasestorage.app",
+      messagingSenderId: "288232930887",
+      appId: "1:288232930887:web:659cbc1588a35ffb1bfb62"
+    };
+    // 👆👆👆 貼在上方 👆👆👆
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
 
     // 2. 雲端認證與連線
-    let currentUser = null;
-    let cloudExpenses = [];
-    let cloudShopping = [];
+      let currentUser = null;
+      let cloudExpenses = [];
+      let cloudShopping = [];
 
-    async function initCloudSync() {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          const userCredential = await signInWithCustomToken(auth, __initial_auth_token);
-          currentUser = userCredential.user;
-        } else {
+      async function initCloudSync() {
+        try {
+          // 強制使用匿名登入，避免與平台自動注入的預設 Token 衝突
           const userCredential = await signInAnonymously(auth);
           currentUser = userCredential.user;
+          
+          const shortUid = currentUser.uid.substring(0, 4);
+          showCustomToast(`☁️ 雲端已連線 (訪客ID: ${shortUid})`);
+          setupRealtimeListeners();
+        } catch (error) {
+          console.error("Auth error:", error);
+          showCustomToast(`⚠️ 連線失敗: ${error.message}`);
         }
+      }
+
+      // 3. 設定即時資料監聽器 (Real-time Sync)
+      function setupRealtimeListeners() {
+        if (!currentUser) return;
+
+        // 記帳監聽
+        const expRef = collection(db, 'artifacts', appId, 'public', 'data', 'expenses');
+        onSnapshot(expRef, (snapshot) => {
+          cloudExpenses = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          cloudExpenses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); 
+          renderCloudExpenses();
+        }, (err) => console.error("Expenses listen error:", err));
+
+        // 購物清單監聽
+        const shopRef = collection(db, 'artifacts', appId, 'public', 'data', 'shopping');
+        onSnapshot(shopRef, (snapshot) => {
+          cloudShopping = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          cloudShopping.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); 
+          renderCloudShopping();
+        }, (err) => console.error("Shopping listen error:", err));
+      }
+
+      // --- 記帳功能 (雲端版) ---
+      function renderCloudExpenses() {
+        const list = document.getElementById('expenseList');
+        list.innerHTML = '';
+        let sumKrw = 0;
+        const rate = parseFloat(document.getElementById('rateInput').value) || 41.5;
+
+        cloudExpenses.forEach((item) => {
+          const amt = item.krw || 0;
+          sumKrw += amt;
+          const twd = Math.round(amt / rate);
+          const catLabel = item.cat ? item.cat.split(' ')[0] : '🛒';
+          const descLabel = item.desc || '未命名項目';
+          const dateLabel = item.date || '12/04';
+
+          const div = document.createElement('div');
+          div.className = 'p-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between';
+          div.innerHTML = `
+            <div class="flex items-center gap-2">
+              <span class="text-sm">${catLabel}</span>
+              <div>
+                <div class="font-bold text-slate-800">${descLabel}</div>
+                <div class="text-[10px] text-slate-400">${dateLabel}</div>
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <div class="text-right">
+                <div class="font-mono font-bold text-slate-900">₩${amt.toLocaleString()}</div>
+                <div class="text-[10px] text-slate-400 font-mono">≈NT$${twd}</div>
+              </div>
+              <button onclick="deleteCloudExpense('${item.id}')" class="text-slate-300 hover:text-red-500 p-1">✕</button>
+            </div>
+          `;
+          list.appendChild(div);
+        });
+
+        document.getElementById('totalKrw').innerText = '₩' + sumKrw.toLocaleString();
+        document.getElementById('totalTwd').innerText = '≈ NT$ ' + Math.round(sumKrw / rate).toLocaleString();
+        document.getElementById('expenseCount').innerText = cloudExpenses.length + ' 筆記錄';
+      }
+
+      window.addExpense = async function() {
+        if (!currentUser) return showCustomToast('請等待雲端連線...');
+        const cat = document.getElementById('expCategory').value;
+        const desc = document.getElementById('expDesc').value.trim();
+        const amount = parseInt(document.getElementById('expAmount').value);
+
+        if (!desc || isNaN(amount) || amount <= 0) {
+          showCustomToast('請填寫完整項目品名與有效金額！');
+          return;
+        }
+
+        try {
+          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'expenses'), {
+            cat, desc, krw: amount, date: '12/04', createdAt: Date.now(), author: currentUser.uid
+          });
+          document.getElementById('expDesc').value = '';
+          document.getElementById('expAmount').value = '';
+        } catch(e) { 
+          console.error(e); 
+          showCustomToast('寫入失敗: ' + e.message);
+        }
+      };
+
+      window.deleteCloudExpense = async function(docId) {
+        if (!currentUser) return;
+        try {
+          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'expenses', docId));
+        } catch(e) { 
+          console.error(e); 
+          showCustomToast('刪除失敗: ' + e.message);
+        }
+      };
+
+      window.clearAllExpenses = function() {
+        showCustomToast('為保護共用資料，暫不開放一鍵清空功能，請單筆刪除');
+      };
+
+      // --- 購物清單 (雲端版) ---
+      function renderCloudShopping() {
+        const container = document.getElementById('shoppingListContainer');
+        container.innerHTML = '';
+        let boughtCount = 0;
+
+        cloudShopping.forEach((item) => {
+          const isBought = item.bought === true;
+          if(isBought) boughtCount++;
+          const nameLabel = item.name || '未命名';
+          const catLabel = item.cat || '無分類';
+
+          const div = document.createElement('div');
+          div.className = `p-2.5 rounded-xl border flex items-center justify-between transition-all ${
+            isBought ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white border-rose-100 shadow-sm'
+          }`;
+          
+          div.innerHTML = `
+            <div class="flex items-center gap-3 flex-1 cursor-pointer" onclick="toggleCloudShopping('${item.id}', ${!isBought})">
+              <div class="w-4 h-4 rounded flex items-center justify-center transition-colors border ${
+                isBought ? 'shop-check-active' : 'border-slate-300 bg-white'
+              }">
+                ${isBought ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
+              </div>
+              <div>
+                <div class="font-bold text-sm ${isBought ? 'text-slate-500 line-through' : 'text-slate-800'}">${nameLabel}</div>
+                <div class="text-[10px] mt-0.5 ${isBought ? 'text-slate-400' : 'text-rose-600'}">${catLabel}</div>
+              </div>
+            </div>
+            <button onclick="deleteCloudShopping('${item.id}')" class="text-slate-300 hover:text-red-500 p-1.5 ml-2 rounded-lg">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
+            </button>
+          `;
+          container.appendChild(div);
+        });
+
+        document.getElementById('shoppingProgress').innerText = `${boughtCount}/${cloudShopping.length} 已買`;
+      }
+
+      window.addShoppingItem = async function() {
+        if (!currentUser) return showCustomToast('請等待雲端連線...');
+        const cat = document.getElementById('shopCategory').value;
+        const name = document.getElementById('shopItemName').value.trim();
         
-        // 成功取得身份後，顯示 UID 的前四碼讓你知道已經登入
-        const shortUid = currentUser.uid.substring(0, 4);
-        showCustomToast(`☁️ 雲端已連線 (訪客ID: ${shortUid})`);
-        setupRealtimeListeners();
-      } catch (error) {
-        console.error("Auth error:", error);
-        showCustomToast(`⚠️ 連線失敗: ${error.message}`);
-      }
-    }
-
-    // 3. 設定即時資料監聽器 (Real-time Sync)
-    function setupRealtimeListeners() {
-      if (!currentUser) return;
-
-      // 記帳監聽
-      const expRef = collection(db, 'artifacts', appId, 'public', 'data', 'expenses');
-      onSnapshot(expRef, (snapshot) => {
-        cloudExpenses = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        cloudExpenses.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); // 防呆排序避免舊資料缺失欄位
-        renderCloudExpenses();
-      }, (err) => console.error("Expenses listen error:", err));
-
-      // 購物清單監聽
-      const shopRef = collection(db, 'artifacts', appId, 'public', 'data', 'shopping');
-      onSnapshot(shopRef, (snapshot) => {
-        cloudShopping = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        cloudShopping.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)); // 防呆排序
-        renderCloudShopping();
-      }, (err) => console.error("Shopping listen error:", err));
-    }
-
-    // --- 記帳功能 (雲端版) ---
-    function renderCloudExpenses() {
-      const list = document.getElementById('expenseList');
-      list.innerHTML = '';
-      let sumKrw = 0;
-      const rate = parseFloat(document.getElementById('rateInput').value) || 41.5;
-
-      cloudExpenses.forEach((item) => {
-        const amt = item.krw || 0;
-        sumKrw += amt;
-        const twd = Math.round(amt / rate);
-        const catLabel = item.cat ? item.cat.split(' ')[0] : '🛒';
-        const descLabel = item.desc || '未命名項目';
-        const dateLabel = item.date || '12/04';
-
-        const div = document.createElement('div');
-        div.className = 'p-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between';
-        div.innerHTML = `
-          <div class="flex items-center gap-2">
-            <span class="text-sm">${catLabel}</span>
-            <div>
-              <div class="font-bold text-slate-800">${descLabel}</div>
-              <div class="text-[10px] text-slate-400">${dateLabel}</div>
-            </div>
-          </div>
-          <div class="flex items-center gap-2">
-            <div class="text-right">
-              <div class="font-mono font-bold text-slate-900">₩${amt.toLocaleString()}</div>
-              <div class="text-[10px] text-slate-400 font-mono">≈NT$${twd}</div>
-            </div>
-            <button onclick="deleteCloudExpense('${item.id}')" class="text-slate-300 hover:text-red-500 p-1">✕</button>
-          </div>
-        `;
-        list.appendChild(div);
-      });
-
-      document.getElementById('totalKrw').innerText = '₩' + sumKrw.toLocaleString();
-      document.getElementById('totalTwd').innerText = '≈ NT$ ' + Math.round(sumKrw / rate).toLocaleString();
-      document.getElementById('expenseCount').innerText = cloudExpenses.length + ' 筆記錄';
-    }
-
-    window.addExpense = async function() {
-      if (!currentUser) return showCustomToast('請等待雲端連線...');
-      const cat = document.getElementById('expCategory').value;
-      const desc = document.getElementById('expDesc').value.trim();
-      const amount = parseInt(document.getElementById('expAmount').value);
-
-      if (!desc || isNaN(amount) || amount <= 0) {
-        showCustomToast('請填寫完整項目品名與有效金額！');
-        return;
-      }
-
-      try {
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'expenses'), {
-          cat, desc, krw: amount, date: '12/04', createdAt: Date.now(), author: currentUser.uid
-        });
-        document.getElementById('expDesc').value = '';
-        document.getElementById('expAmount').value = '';
-      } catch(e) { 
-        console.error(e); 
-        showCustomToast('寫入失敗: ' + e.message); // 顯示具體錯誤
-      }
-    };
-
-    window.deleteCloudExpense = async function(docId) {
-      if (!currentUser) return;
-      try {
-        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'expenses', docId));
-      } catch(e) { 
-        console.error(e); 
-        showCustomToast('刪除失敗: ' + e.message);
-      }
-    };
-
-    window.clearAllExpenses = function() {
-      showCustomToast('為保護共用資料，暫不開放一鍵清空功能，請單筆刪除');
-    };
-
-    // --- 購物清單 (雲端版) ---
-    function renderCloudShopping() {
-      const container = document.getElementById('shoppingListContainer');
-      container.innerHTML = '';
-      let boughtCount = 0;
-
-      cloudShopping.forEach((item) => {
-        const isBought = item.bought === true;
-        if(isBought) boughtCount++;
-        const nameLabel = item.name || '未命名';
-        const catLabel = item.cat || '無分類';
-
-        const div = document.createElement('div');
-        div.className = `p-2.5 rounded-xl border flex items-center justify-between transition-all ${
-          isBought ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white border-rose-100 shadow-sm'
-        }`;
+        if (!name) return showCustomToast('請填寫物品名稱！');
         
-        div.innerHTML = `
-          <div class="flex items-center gap-3 flex-1 cursor-pointer" onclick="toggleCloudShopping('${item.id}', ${!isBought})">
-            <div class="w-4 h-4 rounded flex items-center justify-center transition-colors border ${
-              isBought ? 'shop-check-active' : 'border-slate-300 bg-white'
-            }">
-              ${isBought ? '<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>' : ''}
-            </div>
-            <div>
-              <div class="font-bold text-sm ${isBought ? 'text-slate-500 line-through' : 'text-slate-800'}">${nameLabel}</div>
-              <div class="text-[10px] mt-0.5 ${isBought ? 'text-slate-400' : 'text-rose-600'}">${catLabel}</div>
-            </div>
-          </div>
-          <button onclick="deleteCloudShopping('${item.id}')" class="text-slate-300 hover:text-red-500 p-1.5 ml-2 rounded-lg">
-            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg>
-          </button>
-        `;
-        container.appendChild(div);
-      });
+        try {
+          await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'shopping'), {
+            cat, name, bought: false, createdAt: Date.now()
+          });
+          document.getElementById('shopItemName').value = '';
+        } catch(e) { 
+          console.error(e); 
+          showCustomToast('寫入失敗: ' + e.message);
+        }
+      };
 
-      document.getElementById('shoppingProgress').innerText = `${boughtCount}/${cloudShopping.length} 已買`;
-    }
+      window.toggleCloudShopping = async function(docId, newStatus) {
+        if (!currentUser) return;
+        try {
+          await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'shopping', docId), {
+            bought: newStatus
+          });
+        } catch(e) { 
+          console.error(e); 
+          showCustomToast('更新失敗: ' + e.message);
+        }
+      };
 
-    window.addShoppingItem = async function() {
-      if (!currentUser) return showCustomToast('請等待雲端連線...');
-      const cat = document.getElementById('shopCategory').value;
-      const name = document.getElementById('shopItemName').value.trim();
-      
-      if (!name) return showCustomToast('請填寫物品名稱！');
-      
-      try {
-        await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'shopping'), {
-          cat, name, bought: false, createdAt: Date.now()
-        });
-        document.getElementById('shopItemName').value = '';
-      } catch(e) { 
-        console.error(e); 
-        showCustomToast('寫入失敗: ' + e.message);
-      }
-    };
+      window.deleteCloudShopping = async function(docId) {
+        if (!currentUser) return;
+        try {
+          await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'shopping', docId));
+        } catch(e) { 
+          console.error(e); 
+          showCustomToast('刪除失敗: ' + e.message);
+        }
+      };
 
-    window.toggleCloudShopping = async function(docId, newStatus) {
-      if (!currentUser) return;
-      try {
-        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'shopping', docId), {
-          bought: newStatus
-        });
-      } catch(e) { 
-        console.error(e); 
-        showCustomToast('更新失敗: ' + e.message);
-      }
-    };
-
-    window.deleteCloudShopping = async function(docId) {
-      if (!currentUser) return;
-      try {
-        await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'shopping', docId));
-      } catch(e) { 
-        console.error(e); 
-        showCustomToast('刪除失敗: ' + e.message);
-      }
-    };
-
-    // 啟動 Firebase 連線
-    initCloudSync();
+      // 啟動 Firebase 連線
+      initCloudSync();
   </script>
 
   <!-- JS 邏輯處理 -->
